@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Portal Color Palette Mockups</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alike&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Alike&display=swap');
+        
+        /* Note: Vintage Goods and Biro Script Plus need to be self-hosted or from Adobe Fonts
+           Using similar fallbacks for mockup visualization */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Alike', serif;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-family: 'Alike', serif;
+            color: #2D2926;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .option-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .option-header {
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+        }
+
+        .option-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .option-subtitle {
+            color: #5C5552;
+            font-size: 0.9rem;
+        }
+
+        .mockup {
+            display: flex;
+            min-height: 500px;
+        }
+
+        /* Option 1: Rich Espresso Brown */
+        .option1 .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #6B1830 0%, #8B1E3F 50%, #A85A5A 100%);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem;
+        }
+
+        .option1 .main {
+            flex: 1;
+            background: #FAF6F0; /* Pearl */
+            padding: 2rem;
+        }
+
+        .option1 .card {
+            background: #FFFEF9; /* Ivory */
+            border: 1px solid rgba(139, 30, 63, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .option1 .accent {
+            color: #8B1E3F; /* Cherry */
+        }
+
+        .option1 .sidebar .text {
+            color: #F5EFE6; /* Cream */
+        }
+
+        .option1 .sidebar .text-muted {
+            color: rgba(245, 230, 198, 0.8);
+        }
+
+        .option1 .main .text {
+            color: #6B4A3A; /* Rich espresso brown */
+        }
+
+        .option1 .main .text-muted {
+            color: #8B6A5A; /* Lighter espresso brown */
+        }
+
+        /* Option 2: Deep Maroon Brown */
+        .option2 .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #6B1830 0%, #8B1E3F 50%, #A85A5A 100%);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem;
+        }
+
+        .option2 .main {
+            flex: 1;
+            background: #FAF6F0; /* Pearl */
+            padding: 2rem;
+        }
+
+        .option2 .card {
+            background: #FFFEF9; /* Ivory */
+            border: 1px solid rgba(139, 30, 63, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .option2 .accent {
+            color: #8B1E3F; /* Cherry */
+        }
+
+        .option2 .sidebar .text {
+            color: #F5EFE6; /* Cream */
+        }
+
+        .option2 .sidebar .text-muted {
+            color: rgba(245, 230, 198, 0.8);
+        }
+
+        .option2 .main .text {
+            color: #7A4A3A; /* Deep maroon brown */
+        }
+
+        .option2 .main .text-muted {
+            color: #9B6A5A; /* Lighter maroon brown */
+        }
+
+        /* Option 3: Warm Orange Sidebar Text + Rich Brown */
+        .option3 .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #6B1830 0%, #8B1E3F 50%, #A85A5A 100%);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            padding: 1.5rem;
+        }
+
+        .option3 .main {
+            flex: 1;
+            background: #FAF6F0; /* Pearl */
+            padding: 2rem;
+        }
+
+        .option3 .card {
+            background: #FFFEF9; /* Ivory */
+            border: 1px solid rgba(139, 30, 63, 0.15);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .option3 .accent {
+            color: #8B1E3F;
+        }
+
+        .option3 .sidebar .text {
+            color: #E8D5B5; /* Warm orange-beige (like "Model Portal" text) */
+        }
+
+        .option3 .sidebar .text-muted {
+            color: rgba(232, 213, 181, 0.8); /* Warm orange-beige with opacity */
+        }
+
+        .option3 .main .text {
+            color: #4A2A1A; /* Darker rich espresso brown */
+        }
+
+        .option3 .main .text-muted {
+            color: #5A3A2A; /* Darker espresso brown */
+        }
+
+        /* Common styles */
+        .logo {
+            /* Vintage Goods - Brand name ONLY (needs to be self-hosted/Adobe Fonts) */
+            font-family: 'Vintage Goods', 'Brush Script MT', 'Lucida Handwriting', cursive;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+        
+        body, .nav-item, .card-content, .text, .text-muted, .card-title, h2 {
+            /* Alike - Body text */
+            font-family: 'Alike', 'Georgia', serif;
+        }
+        
+        .biro-accent {
+            /* Biro Script Plus - Fun pop-up short bits (needs to be self-hosted/Adobe Fonts) */
+            font-family: 'Biro Script Plus', 'Pinyon Script', 'Brush Script MT', cursive;
+            font-style: italic;
+            font-weight: 400;
+        }
+
+        .nav-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .nav-item:hover {
+            background: rgba(139, 30, 63, 0.1);
+        }
+
+        .nav-item.active {
+            background: rgba(139, 30, 63, 0.15);
+            border-left: 3px solid #8B1E3F;
+        }
+
+        .card-title {
+            font-family: 'Alike', serif; /* Body text for headings too */
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .card-content {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .stat-card {
+            display: inline-block;
+            background: rgba(139, 30, 63, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-right: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+        }
+
+        .color-swatch {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            margin-right: 0.5rem;
+            border: 1px solid rgba(0,0,0,0.1);
+            vertical-align: middle;
+        }
+
+        .color-info {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .color-info-item {
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .recommended-badge {
+            display: inline-block;
+            background: #8B1E3F;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Model Portal Color Palette Options</h1>
+        
+        <div class="options-grid">
+            <!-- Option 1: Rich Espresso Brown -->
+            <div class="option-card option1">
+                <div class="option-header">
+                    <div class="option-title">Option 1: Rich Espresso Brown</div>
+                    <div class="option-subtitle">Cherry sidebar, cream text, rich espresso brown main text</div>
+                </div>
+                <div class="mockup">
+                    <div class="sidebar">
+                        <div class="logo" style="color: #F5EFE6;">MODELED</div>
+                        <div class="text-muted" style="font-size: 0.7rem; margin-bottom: 1.5rem;">MODEL PORTAL</div>
+                        
+                        <div class="nav-item active" style="background: rgba(255,255,255,0.15);">
+                            <span class="text">📊 Dashboard</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">👤 Profile</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">💇 My Sessions</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">📚 Learn & Glow</span>
+                        </div>
+
+                        <div class="color-info" style="border-top-color: rgba(245, 230, 198, 0.3);">
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: linear-gradient(180deg, #6B1830 0%, #8B1E3F 50%, #A85A5A 100%);"></span>
+                                Sidebar: Cherry Gradient
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #F5EFE6;"></span>
+                                Sidebar Text: #F5EFE6 (Cream)
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #FAF6F0;"></span>
+                                Main: #FAF6F0 (Pearl)
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #6B4A3A;"></span>
+                                Text: #6B4A3A (Rich Espresso)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main">
+                        <h2 class="text" style="margin-bottom: 1rem;">Welcome back, Emma!</h2>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">Here's your dashboard overview</p>
+                        
+                        <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(139, 30, 63, 0.05); border-radius: 12px; border: 1px dashed rgba(139, 30, 63, 0.3);">
+                            <span class="biro-accent" style="color: #8B1E3F; font-size: 1.3rem; display: block; margin-bottom: 0.5rem;">You're doing great!</span>
+                            <span style="font-size: 0.9rem; color: #7A4A3A;">Keep up the amazing work</span>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title text">My Stats</div>
+                            <div class="card-content">
+                                <div class="stat-card">
+                                    <div class="stat-value accent">12</div>
+                                    <div class="stat-label text-muted">Sessions</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value accent">$840</div>
+                                    <div class="stat-label text-muted">Saved</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value accent">4.9</div>
+                                    <div class="stat-label text-muted">Rating</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title text">Recent Activity</div>
+                            <div class="card-content text-muted">
+                                Your latest sessions and matches will appear here.
+                                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(139, 30, 63, 0.05); border-radius: 8px; border-left: 3px solid #8B1E3F;">
+                                    <span class="biro-accent" style="color: #8B1E3F; font-size: 1.1rem; display: block; margin-bottom: 0.25rem;">New match available!</span>
+                                    <div style="font-size: 0.85rem; margin-top: 0.25rem; color: #7A4A3A;">Check your matches tab</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Option 2: Deep Maroon Brown -->
+            <div class="option-card option2">
+                <div class="option-header">
+                    <div class="option-title">Option 2: Deep Maroon Brown</div>
+                    <div class="option-subtitle">Cherry sidebar, cream text, deep maroon brown main text</div>
+                </div>
+                <div class="mockup">
+                    <div class="sidebar">
+                        <div class="logo" style="color: #F5EFE6;">MODELED</div>
+                        <div class="text-muted" style="font-size: 0.7rem; margin-bottom: 1.5rem;">MODEL PORTAL</div>
+                        
+                        <div class="nav-item active" style="background: rgba(255,255,255,0.15);">
+                            <span class="text">📊 Dashboard</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">👤 Profile</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">💇 My Sessions</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">📚 Learn & Glow</span>
+                        </div>
+
+                        <div class="color-info" style="border-top-color: rgba(245, 230, 198, 0.3);">
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: linear-gradient(180deg, #6B1830 0%, #8B1E3F 50%, #A85A5A 100%);"></span>
+                                Sidebar: Cherry Gradient
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #F5EFE6;"></span>
+                                Sidebar Text: #F5EFE6 (Cream)
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #FAF6F0;"></span>
+                                Main: #FAF6F0 (Pearl)
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #7A4A3A;"></span>
+                                Text: #7A4A3A (Deep Maroon Brown)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main">
+                        <h2 class="text" style="margin-bottom: 1rem;">Welcome back, Emma!</h2>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">Here's your dashboard overview</p>
+                        
+                        <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(139, 30, 63, 0.05); border-radius: 12px; border: 1px dashed rgba(139, 30, 63, 0.3);">
+                            <span class="biro-accent" style="color: #8B1E3F; font-size: 1.3rem; display: block; margin-bottom: 0.5rem;">You're doing great!</span>
+                            <span style="font-size: 0.9rem; color: #7A4A3A;">Keep up the amazing work</span>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title text">My Stats</div>
+                            <div class="card-content">
+                                <div class="stat-card">
+                                    <div class="stat-value accent">12</div>
+                                    <div class="stat-label text-muted">Sessions</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value accent">$840</div>
+                                    <div class="stat-label text-muted">Saved</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value accent">4.9</div>
+                                    <div class="stat-label text-muted">Rating</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title text">Recent Activity</div>
+                            <div class="card-content text-muted">
+                                Your latest sessions and matches will appear here.
+                                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(139, 30, 63, 0.05); border-radius: 8px; border-left: 3px solid #8B1E3F;">
+                                    <span class="biro-accent" style="color: #8B1E3F; font-size: 1.1rem; display: block; margin-bottom: 0.25rem;">New match available!</span>
+                                    <div style="font-size: 0.85rem; margin-top: 0.25rem; color: #7A4A3A;">Check your matches tab</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Option 3: Warm Orange Sidebar Text -->
+            <div class="option-card option3">
+                <div class="option-header">
+                    <div class="option-title">Option 3: Warm Orange Sidebar Text <span class="recommended-badge" style="background: #8B1E3F;">NEW</span></div>
+                    <div class="option-subtitle">Cherry sidebar with warm orange-beige text (like "Model Portal"), rich espresso brown main text</div>
+                </div>
+                <div class="mockup">
+                    <div class="sidebar">
+                        <div class="logo" style="color: #E8D5B5;">MODELED</div>
+                        <div class="text-muted" style="font-size: 0.7rem; margin-bottom: 1.5rem;">MODEL PORTAL</div>
+                        
+                        <div class="nav-item active" style="background: rgba(255,255,255,0.15);">
+                            <span class="text">📊 Dashboard</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">👤 Profile</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">💇 My Sessions</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="text">📚 Learn & Glow</span>
+                        </div>
+
+                        <div class="color-info" style="border-top-color: rgba(232, 213, 181, 0.3);">
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: linear-gradient(180deg, #6B1830 0%, #8B1E3F 50%, #A85A5A 100%);"></span>
+                                Sidebar: Cherry Gradient
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #E8D5B5;"></span>
+                                Sidebar Text: #E8D5B5 (Warm Orange-Beige)
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #FAF6F0;"></span>
+                                Main: #FAF6F0 (Pearl)
+                            </div>
+                            <div class="color-info-item">
+                                <span class="color-swatch" style="background: #6B4A3A;"></span>
+                                Text: #6B4A3A (Rich Espresso)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main">
+                        <h2 class="text" style="margin-bottom: 1rem;">Welcome back, Emma!</h2>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">Here's your dashboard overview</p>
+                        
+                        <div style="margin-bottom: 1.5rem; padding: 1rem; background: rgba(139, 30, 63, 0.05); border-radius: 12px; border: 1px dashed rgba(139, 30, 63, 0.3);">
+                            <span class="biro-accent" style="color: #8B1E3F; font-size: 1.3rem; display: block; margin-bottom: 0.5rem;">You're doing great!</span>
+                            <span style="font-size: 0.9rem; color: #4A2A1A;">Keep up the amazing work</span>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-title text">My Stats</div>
+                            <div class="card-content">
+                                <div class="stat-card">
+                                    <div class="stat-value accent">12</div>
+                                    <div class="stat-label text-muted">Sessions</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value accent">$840</div>
+                                    <div class="stat-label text-muted">Saved</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value accent">4.9</div>
+                                    <div class="stat-label text-muted">Rating</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title text">Recent Activity</div>
+                            <div class="card-content text-muted">
+                                Your latest sessions and matches will appear here.
+                                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(139, 30, 63, 0.05); border-radius: 8px; border-left: 3px solid #8B1E3F;">
+                                    <span class="biro-accent" style="color: #8B1E3F; font-size: 1.1rem; display: block; margin-bottom: 0.25rem;">New match available!</span>
+                                    <div style="font-size: 0.85rem; margin-top: 0.25rem; color: #4A2A1A;">Check your matches tab</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 2rem; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+            <h2 style="font-family: 'Alike', serif; color: #2D2926; margin-bottom: 1rem;">Font & Color Reference</h2>
+            
+            <div style="margin-bottom: 2rem; padding: 1.5rem; background: #FAF6F0; border-radius: 12px; border: 1px solid rgba(139, 30, 63, 0.15);">
+                <h3 style="font-family: 'Alike', serif; color: #2D2926; margin-bottom: 1rem; font-size: 1.1rem;">Font Hierarchy</h3>
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-family: 'Vintage Goods', 'Brush Script MT', cursive; font-size: 2rem; color: #8B1E3F; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.1em;">MODELED</div>
+                    <div style="font-size: 0.85rem; color: #5C5552; margin-bottom: 1rem;">Vintage Goods - Brand name ONLY</div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <div style="font-family: 'Alike', serif; font-size: 1.2rem; color: #2D2926; margin-bottom: 0.5rem;">Body Text & Navigation</div>
+                    <div style="font-size: 0.85rem; color: #5C5552; margin-bottom: 1rem;">Alike - All body text, headings, navigation</div>
+                </div>
+                <div>
+                    <div class="biro-accent" style="font-size: 1.3rem; color: #8B1E3F; margin-bottom: 0.5rem;">Fun pop-up moments!</div>
+                    <div style="font-size: 0.85rem; color: #5C5552;">Biro Script Plus - Short accent text, notifications, special messages</div>
+                </div>
+            </div>
+            
+            <h2 style="font-family: 'Alike', serif; color: #2D2926; margin-bottom: 1rem;">Color Palette Reference</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+                <div>
+                    <h3 style="font-size: 0.9rem; color: #5C5552; margin-bottom: 0.5rem;">Cherry Family</h3>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #8B1E3F;"></span>
+                        <span style="font-size: 0.85rem;">#8B1E3F (Primary)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #A85A5A;"></span>
+                        <span style="font-size: 0.85rem;">#A85A5A (Light)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #6B1830;"></span>
+                        <span style="font-size: 0.85rem;">#6B1830 (Dark)</span>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.9rem; color: #5C5552; margin-bottom: 0.5rem;">Pink Family</h3>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #D4858A;"></span>
+                        <span style="font-size: 0.85rem;">#D4858A</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #E8B4B8;"></span>
+                        <span style="font-size: 0.85rem;">#E8B4B8 (Light)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #F5D0D3;"></span>
+                        <span style="font-size: 0.85rem;">#F5D0D3 (Glow)</span>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.9rem; color: #5C5552; margin-bottom: 0.5rem;">Backgrounds</h3>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #FAF6F0;"></span>
+                        <span style="font-size: 0.85rem;">#FAF6F0 (Pearl)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #F8F4EE;"></span>
+                        <span style="font-size: 0.85rem;">#F8F4EE (Pearl Warm)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #F5EFE6;"></span>
+                        <span style="font-size: 0.85rem;">#F5EFE6 (Cream)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #FFFEF9;"></span>
+                        <span style="font-size: 0.85rem;">#FFFEF9 (Ivory)</span>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="font-size: 0.9rem; color: #5C5552; margin-bottom: 0.5rem;">Text Colors</h3>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #2D2926;"></span>
+                        <span style="font-size: 0.85rem;">#2D2926 (Dark)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #5C5552;"></span>
+                        <span style="font-size: 0.85rem;">#5C5552 (Muted)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #4A2A1A;"></span>
+                        <span style="font-size: 0.85rem;">#4A2A1A (Darker Rich Espresso) ✨ UPDATED</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #5A3A2A;"></span>
+                        <span style="font-size: 0.85rem;">#5A3A2A (Darker Espresso Muted) ✨ NEW</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #7A4A3A;"></span>
+                        <span style="font-size: 0.85rem;">#7A4A3A (Deep Maroon Brown) ✨ NEW</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #8B6A5A;"></span>
+                        <span style="font-size: 0.85rem;">#8B6A5A (Lighter Espresso) ✨ NEW</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #F5EFE6;"></span>
+                        <span style="font-size: 0.85rem;">#F5EFE6 (Cream - sidebar text)</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <div class="color-swatch" style="background: #E8D5B5;"></span>
+                        <span style="font-size: 0.85rem;">#E8D5B5 (Warm Orange-Beige - sidebar text) ✨ NEW</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

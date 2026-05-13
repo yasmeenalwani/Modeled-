@@ -1,0 +1,8 @@
+Category,Field,Type,Options,Description,Visibility
+Hair Length (Detailed),hairLengthDetailed,string,"buzzed, chin-length, shoulder, mid-back, waist+",Detailed hair length measurement,Admin-only
+Hair Color (Detailed),hairColorDetailed,JSON,"{ natural: ""dark_brown"", depth: 4, undertone: ""warm"", artificial: ""none"" }",Detailed color analysis with depth and undertone,Admin-only
+Hair Texture (Detailed),hairTextureDetailed,string,1A-4C (Andre Walker system),Andre Walker curl pattern classification,Admin-only
+Hair Density,hairDensity,enum,"thin, medium, thick",Hair density/thickness,Admin-only
+Hair Porosity,hairPorosity,enum,"low, medium, high",Hair porosity level (important for color treatments),Admin-only
+Hair Health,hairHealth,JSON,"{ frizz: ""low"", damage: ""none"", splitEnds: false, shine: ""natural"" }",Hair health metrics,Admin-only
+Hair Style,hairStyle,string,"natural, blowout, silk_press, braids, cornrows, locs, twists, afro, bantu_knots, ponytail, updo, bob, wig, weave, twa, fade",Current hair style,Admin-only

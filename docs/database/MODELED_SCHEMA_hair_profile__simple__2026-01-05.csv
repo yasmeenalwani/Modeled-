@@ -1,0 +1,4 @@
+Category,Field,Type,Options,Description,Visibility
+Hair Length (Simple),hairLengthSimple,enum,"short, medium, long, extra_long",User-facing hair length classification,User-facing
+Hair Color (Simple),hairColorSimple,enum,"black, brown, blonde, red, gray, colored",User-facing hair color classification,User-facing
+Hair Texture (Simple),hairTextureSimple,enum,"straight, wavy, curly, coily",User-facing hair texture classification,User-facing

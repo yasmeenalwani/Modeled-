@@ -1,0 +1,183 @@
+# Generated from portal-data-catalog.xlsx
+# Source sheets: 06_AppSync_Models, 07_AppSync_Fields
+# Review enums and auth rules before deploying.
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+scalar AWSDate
+scalar AWSDateTime
+scalar AWSJSON
+
+type Professional @model {
+  # Professional account/profile core record
+  # owner_role: pro
+  # read_roles: pro,admin
+  # write_roles: pro,admin
+  id: ID!
+  userId: String!
+  email: String!
+  firstName: String!
+  lastName: String!
+  salonName: String
+  salonAddress: String
+  status: ProfessionalStatusEnum!
+}
+
+type Model @model {
+  # Model account/profile core record
+  # owner_role: model
+  # read_roles: model,admin,pro
+  # write_roles: model,admin
+  id: ID!
+  userId: String!
+  firstName: String!
+  lastName: String!
+  hairProfile: AWSJSON
+}
+
+type ModelRequest @model {
+  # Professional request for a model session
+  # owner_role: pro
+  # read_roles: pro,admin
+  # write_roles: pro,admin
+  id: ID!
+  professionalId: ID!
+  serviceType: ModelRequestServiceTypeEnum!
+  requestedDate: AWSDate!
+  requestedTime: String!
+  status: ModelRequestStatusEnum!
+}
+
+type Match @model {
+  # Match record between request and model
+  # owner_role: system
+  # read_roles: pro,model,admin
+  # write_roles: admin,system
+  id: ID!
+  requestId: ID!
+  modelId: ID!
+  status: MatchStatusEnum!
+}
+
+type Booking @model {
+  # Confirmed session between pro and model
+  # owner_role: system
+  # read_roles: pro,model,admin
+  # write_roles: admin,system
+  id: ID!
+  matchId: ID
+  professionalId: ID!
+  modelId: ID!
+  appointmentDate: AWSDate!
+  appointmentTime: String!
+  status: BookingStatusEnum!
+}
+
+type Review @model {
+  # Post-session model feedback for a booking
+  # owner_role: model
+  # read_roles: pro,admin
+  # write_roles: model,admin
+  bookingId: ID!
+  rating: Int!
+  comment: String
+}
+
+type TrainingProgress @model {
+  # Professional training completion and sign-off
+  # owner_role: pro
+  # read_roles: pro,admin
+  # write_roles: pro,admin
+  professionalId: ID!
+  categoryId: String!
+  completedHours: Int!
+}
+
+type ChatConversation @model {
+  # Chat thread between participants
+  # owner_role: system
+  # read_roles: pro,model,admin
+  # write_roles: system
+  participantIds: [ID]!
+}
+
+type ChatMessage @model {
+  # Individual chat message in a conversation
+  # owner_role: system
+  # read_roles: pro,model,admin
+  # write_roles: pro,model,system
+  conversationId: ID!
+  senderId: ID!
+  content: String!
+}
+
+type PortfolioItem @model {
+  # Professional portfolio photo entry
+  # owner_role: pro
+  # read_roles: pro,admin
+  # write_roles: pro,admin
+  professionalId: ID!
+  imageUrl: String!
+  serviceTag: String
+}
+
+type Tip @model {
+  # Tip record tied to a booking and Stripe payment
+  # owner_role: system
+  # read_roles: pro,admin
+  # write_roles: system
+  bookingId: ID!
+  amount: Float!
+  stripePaymentIntentId: String
+}
+
+enum ProfessionalStatusEnum {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ModelRequestServiceTypeEnum {
+  COLOR
+  HAIRCUT
+  BLOWDRY
+  HIGHLIGHTS
+}
+
+enum ModelRequestStatusEnum {
+  DRAFT
+  MATCHING
+  SENT
+  APPROVED
+  EXPIRED
+}
+
+enum MatchStatusEnum {
+  SENT
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum BookingStatusEnum {
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+type Query {
+  _placeholder: String
+}
+
+type Mutation {
+  _placeholder: String
+}
+
+type Subscription {
+  _placeholder: String
+}

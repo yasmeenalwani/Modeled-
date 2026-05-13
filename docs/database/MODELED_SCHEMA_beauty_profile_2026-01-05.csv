@@ -1,0 +1,11 @@
+Category,Field,Type,Options,Description,Visibility
+Skin Tone (Simple),skinToneSimple,enum,"fair, light, medium, olive, tan, brown, dark",User-facing skin tone classification,User-facing
+Skin Undertone,skinUndertone,enum,"warm, cool, neutral",Skin undertone,User-facing
+Skin Type,skinType,enum,"dry, normal, oily, combination",Skin type classification,User-facing
+Face Shape (Simple),faceShapeSimple,enum,"oval, round, square, heart, oblong, diamond",User-facing face shape,User-facing
+Eye Color (Simple),eyeColorSimple,enum,"brown, blue, green, hazel, gray, amber",User-facing eye color,User-facing
+Eye Shape (Simple),eyeShapeSimple,enum,"almond, round, hooded, monolid, downturned, upturned",User-facing eye shape,User-facing
+Eyebrow Shape (Simple),eyebrowShapeSimple,enum,"arched, straight, curved, s_shaped, rounded",User-facing eyebrow shape,User-facing
+Eyebrow Thickness,eyebrowThickness,enum,"thin, medium, thick, bushy",Eyebrow thickness,User-facing
+Lip Shape (Simple),lipShapeSimple,enum,"full, thin, heart, wide, round, bow_shaped",User-facing lip shape,User-facing
+Lip Size,lipSize,enum,"thin, medium, full, very_full",Lip size classification,User-facing

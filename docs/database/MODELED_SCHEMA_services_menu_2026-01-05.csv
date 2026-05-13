@@ -1,0 +1,7 @@
+Service_ID,Service_Name,Category,Price,Duration_Minutes,Professional_Fee_Percent,Professional_Fee,Model_Fee_Percent,Model_Fee,Total_Revenue,Description,Requirements
+haircut,Haircut,Hair,125,60,17,21,20,25,46,Precision cut and styling,Any hair type
+color,Color,Hair,300,180,12,36,10,30,66,Full color treatment,Virgin or color-treated hair
+blowdry,Blowdry,Hair,90,45,17,15,22,20,35,Professional blowout styling,Medium to long hair preferred
+gloss,Gloss,Hair,100,60,17,17,25,25,42,Shine and toning treatment,Any hair type
+highlights,Highlights,Hair,225,150,12,27,13,30,57,Partial or full highlights,Virgin or lightly processed hair preferred
+keratin,Keratin,Hair,300,180,12,36,12,35,71,Keratin smoothing treatment,Frizzy or curly hair ideal

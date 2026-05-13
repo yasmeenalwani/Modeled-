@@ -1,0 +1,5 @@
+Preference_Type,Examples,Storage_Field,Description
+Service Preference,"Open to color, Love balayage, Trims OK, Love blowouts, No bleach",tags (string array),User-defined preference tags stored in tags array field
+Location Preference,"Manhattan only, Brooklyn preferred, Willing to travel",tags (string array),Location-related preferences
+Time Preference,"Mornings preferred, Afternoons only, Weekends only",tags (string array),Time/schedule preferences
+Style Preference,"Natural styles, Bold changes, Conservative",tags (string array),Style preferences and restrictions

@@ -1,0 +1,5 @@
+Category,Field,Type,Options,Description,Visibility
+Hair Length (Legacy),hairLength,enum,"short, medium, long, extra_long",Legacy field - maps to hairLengthSimple,User-facing
+Hair Color (Legacy),hairColor,string,Free text,Legacy field - free text color,User-facing
+Hair Texture (Legacy),hairTexture,enum,"straight, wavy, curly, coily",Legacy field - maps to hairTextureSimple,User-facing
+Hair Condition,hairCondition,enum,"healthy, damaged, color_treated, virgin",Overall hair condition,User-facing

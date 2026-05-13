@@ -1,0 +1,10 @@
+{
+  "name": "auto-matching",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@aws-amplify/backend": "^1.18.0",
+    "aws-amplify": "^6.15.8",
+    "aws-lambda": "^1.0.0"
+  }
+}

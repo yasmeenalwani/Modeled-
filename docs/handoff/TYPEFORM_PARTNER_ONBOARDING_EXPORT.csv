@@ -1,0 +1,13 @@
+section,field_key,question_text,type,required,options,notes,maps_to_partner
+basic_info,businessName,Business Name,short_text,yes,,,businessName
+basic_info,contactName,Contact Name,short_text,yes,,,contactName
+basic_info,email,Email,email,yes,,must be valid email,email
+basic_info,phone,Phone,phone,yes,,must be valid 10-digit phone,phone
+business,website,Website,website,no,,optional,website
+location,city,City,short_text,no,,optional,city
+location,state,State,short_text,no,,optional,state
+location,zip,ZIP,short_text,no,,optional,zip
+business,message,Tell us about your business,long_text,no,,maps to somethingFun in Partner model,somethingFun
+legal,termsAccepted,I agree to Partner Terms & consent to contact,yes_no,yes,Yes,must be true to submit,termsAccepted/termsAcceptedAt
+metadata,status,Application status,short_text,no,,set default pending,status
+metadata,identityVerificationStatus,Identity verification status,short_text,no,,set default pending,identityVerificationStatus

@@ -1,0 +1,14 @@
+{
+  "name": "stripe-payment",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.700.0",
+    "aws-amplify": "^6.15.8",
+    "stripe": "^17.3.1"
+  },
+  "devDependencies": {
+    "@aws-amplify/backend": "^1.18.0",
+    "@types/aws-lambda": "^8.10.145"
+  }
+}

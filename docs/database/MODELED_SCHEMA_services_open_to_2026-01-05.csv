@@ -1,0 +1,7 @@
+Field,Type,Description,Service_Related
+openToHaircut,boolean,Model is open to haircut services,haircut
+openToColor,boolean,Model is open to color services,"color, highlights"
+openToStyling,boolean,Model is open to styling/blowdry services,blowdry
+openToMakeup,boolean,Model is open to makeup services,makeup
+openToNails,boolean,Model is open to nail services,nails
+openToSkincare,boolean,Model is open to skincare services,skincare

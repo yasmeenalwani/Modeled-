@@ -1,0 +1,22 @@
+section,field_key,question_text,type,required,options,notes,maps_to_modelprofile
+basic_info,firstName,What's your first name?,short_text,yes,,min 2 chars,firstName
+basic_info,lastName,What's your last name?,short_text,yes,,min 2 chars,lastName
+basic_info,email,What's your email address?,email,yes,,must be valid email,email
+basic_info,phone,What's your phone number?,phone,yes,,must be valid 10-digit phone,phone
+basic_info,locationZip,What's your ZIP code?,short_text,yes,,must be valid 5-digit zip,locationZip
+questions,somethingFun,Tell us something fun about you,long_text,yes,,required,somethingFun
+questions,whatYouCareAbout,What do you care about?,long_text,yes,,required,whatYouCareAbout
+questions,serviceYouLove,What's your favorite beauty or hair service?,long_text,yes,,required (merged with serviceYouWantToTry in favoriteService),favoriteService
+questions,serviceYouWantToTry,What's a beauty or hair service you want to try?,long_text,yes,,required (merged with serviceYouLove in favoriteService),favoriteService
+community,communityInterests,Which Modeled community experiences interest you?,multi_select,yes,Parties|Events|Perks|Panels|Photoshoots|Other,at least one required; if Other selected require communityInterestsOther,communityInterests
+community,communityInterestsOther,Please specify other community experiences,short_text,conditional,,required only when Other selected,communityInterestsOther
+photos,photoUpload,Upload 6 photos of your look,file_upload_multiple,yes,,app expects six photos; enforce manually in review if Typeform cannot enforce exactly 6,photoUrls/headshotUrl
+look_attributes,hairLengthSimple,Hair length,single_select,yes,Short (chin or above)|Medium (shoulder length)|Long (past shoulders)|Extra long (mid-back or longer),required,hairLengthSimple
+look_attributes,hairColorSimple,Hair color,single_select,yes,Black|Brown|Blonde|Red|Gray|Colored (highlights/fashion color),required,hairColorSimple
+look_attributes,hairTextureSimple,Hair texture,single_select,yes,Straight|Wavy|Curly|Coily,required,hairTextureSimple
+look_attributes,hairCondition,Hair condition,single_select,yes,Healthy|Color treated|Damaged|Virgin (never colored/chemically treated),required,hairCondition
+look_attributes,skinToneSimple,Skin tone,single_select,yes,Fair|Light|Medium|Olive|Tan|Brown|Dark,required,skinToneSimple
+identity,idDocumentUpload,Upload government-issued ID,file_upload,yes,,driver license/passport/state ID,idDocumentUrl
+identity,idDocumentType,ID document type,single_select,yes,Driver's License|Passport|State ID|Other,required,idDocumentType
+identity,verificationSelfieUpload,Upload or capture a selfie,file_upload,yes,,face must be clear,verificationSelfieUrl
+legal,termsAccepted,I have read and agree to Terms & Privacy,yes_no,yes,Yes,must be true to submit,termsAccepted/termsAcceptedAt

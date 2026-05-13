@@ -1,0 +1,239 @@
+/* ============================================
+   MODELED MANAGEMENT - Global Styles
+   ============================================ */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  /* Brand Colors - Cherry & Pearl */
+  --modeled-cherry: #8B1E3F;
+  --modeled-cherry-light: #A85A5A;
+  --modeled-cherry-dark: #6B1830;
+  --modeled-pink: #D4858A;
+  --modeled-pink-light: #E8B4B8;
+  --modeled-pink-glow: #F5D0D3;
+  
+  /* Sage Green Options */
+  --modeled-sage: #A8AD8C;
+  --modeled-sage-light: #C4C9A7;
+  --modeled-sage-muted: #B8BCA0;
+  
+  /* Pearl/Cream Backgrounds */
+  --modeled-pearl: #FAF6F0;
+  --modeled-pearl-warm: #F8F4EE;
+  --modeled-cream: #F5EFE6;
+  --modeled-ivory: #FFFEF9;
+  
+  /* Text Colors */
+  --modeled-text-dark: #2D2926;
+  --modeled-text-muted: #5C5552;
+  --modeled-text-light: #8A8583;
+  
+  /* Legacy dark theme (for admin, etc) */
+  --modeled-dark: #1a1a2e;
+  --modeled-dark-mid: #16213e;
+  --modeled-dark-light: #0f3460;
+  
+  /* Typography - Option 3 Font Hierarchy */
+  --font-brand: 'Vintage Goods', 'Brush Script MT', 'Lucida Handwriting', cursive; /* ONLY for "MODELED" brand name */
+  --font-body: 'Alike', 'Georgia', serif; /* Body text */
+  --font-fun: 'Biro Script Plus', 'Brush Script MT', cursive; /* Fun pop-up short bits */
+  --font-display: 'Playfair Display', Georgia, serif; /* Legacy */
+  --font-script: 'Pinyon Script', cursive; /* Legacy */
+  --font-elegant: 'Cormorant Garamond', Georgia, serif; /* Legacy */
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  
+  font-family: var(--font-body);
+  line-height: 1.6;
+  font-weight: 400;
+  color: var(--modeled-text-dark);
+  background-color: var(--modeled-pearl);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  margin: 0;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0 0 1rem 0;
+}
+
+a {
+  color: var(--modeled-cherry);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--modeled-cherry-light);
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* ============================================
+   Amplify Authenticator Customization
+   ============================================ */
+
+[data-amplify-authenticator] {
+  --amplify-colors-brand-primary-10: #fdf8f8;
+  --amplify-colors-brand-primary-20: #f5e0e2;
+  --amplify-colors-brand-primary-40: #e8b4b8;
+  --amplify-colors-brand-primary-60: #d4858a;
+  --amplify-colors-brand-primary-80: #8B1E3F;
+  --amplify-colors-brand-primary-90: #7a1a37;
+  --amplify-colors-brand-primary-100: #6B1830;
+  
+  --amplify-colors-background-primary: var(--modeled-pearl);
+  --amplify-colors-background-secondary: var(--modeled-cream);
+  --amplify-colors-font-primary: var(--modeled-text-dark);
+  --amplify-colors-font-secondary: var(--modeled-text-muted);
+  
+  --amplify-components-authenticator-router-border-color: rgba(139, 30, 63, 0.15);
+  --amplify-components-authenticator-router-background-color: rgba(255, 255, 255, 0.8);
+  --amplify-components-authenticator-router-box-shadow: 0 10px 40px rgba(139, 30, 63, 0.1);
+  
+  --amplify-components-button-primary-background-color: var(--modeled-cherry);
+  --amplify-components-button-primary-hover-background-color: var(--modeled-cherry-dark);
+  
+  --amplify-components-fieldcontrol-border-color: rgba(139, 30, 63, 0.2);
+  --amplify-components-fieldcontrol-focus-border-color: var(--modeled-cherry);
+  --amplify-components-fieldcontrol-color: var(--modeled-text-dark);
+  --amplify-components-fieldcontrol-background-color: rgba(255, 255, 255, 0.7);
+  
+  --amplify-components-tabs-item-active-color: var(--modeled-cherry);
+  --amplify-components-tabs-item-active-border-color: var(--modeled-cherry);
+  --amplify-components-tabs-item-color: var(--modeled-text-muted);
+  
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--modeled-ivory) 0%, var(--modeled-pearl) 50%, var(--modeled-pearl-warm) 100%);
+}
+
+[data-amplify-authenticator] [data-amplify-container] {
+  width: 100%;
+  max-width: 420px;
+}
+
+[data-amplify-authenticator] [data-amplify-router] {
+  border-radius: 20px;
+  border: 1px solid rgba(139, 30, 63, 0.1);
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+/* Custom header for authenticator - Logo with script font */
+[data-amplify-authenticator]::before {
+  content: "modeled";
+  display: block;
+  text-align: center;
+  font-family: var(--font-script);
+  font-size: 3.5rem;
+  font-weight: 400;
+  color: var(--modeled-cherry);
+  letter-spacing: 0.02em;
+  margin-bottom: 1rem;
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ============================================
+   Utility Classes
+   ============================================ */
+
+.text-center {
+  text-align: center;
+}
+
+.text-pink {
+  color: var(--modeled-pink);
+}
+
+.text-cherry {
+  color: var(--modeled-cherry);
+}
+
+.text-sage {
+  color: var(--modeled-sage);
+}
+
+.bg-pearl {
+  background-color: var(--modeled-pearl);
+}
+
+.bg-cream {
+  background-color: var(--modeled-cream);
+}
+
+.mt-1 { margin-top: var(--spacing-md); }
+.mt-2 { margin-top: var(--spacing-lg); }
+.mt-3 { margin-top: var(--spacing-xl); }
+.mb-1 { margin-bottom: var(--spacing-md); }
+.mb-2 { margin-bottom: var(--spacing-lg); }
+.mb-3 { margin-bottom: var(--spacing-xl); }
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 640px) {
+  [data-amplify-authenticator] [data-amplify-container] {
+    padding: 1rem;
+  }
+  
+  [data-amplify-authenticator]::before {
+    top: 15%;
+    font-size: 1.5rem;
+  }
+}

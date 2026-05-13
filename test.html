@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Page</title>
+</head>
+<body>
+    <h1 style="color: red; font-size: 3rem;">TEST - IF YOU SEE THIS, THE BROWSER WORKS</h1>
+    <div id="root"></div>
+    <script type="module">
+        import { createRoot } from 'react-dom/client';
+        import { StrictMode } from 'react';
+        const root = document.getElementById('root');
+        if (root) {
+            createRoot(root).render(
+                StrictMode({}, 
+                    React.createElement('div', {style: {padding: '2rem', background: 'yellow'}}, 
+                        React.createElement('h1', {}, 'REACT WORKS!'),
+                        React.createElement('p', {}, 'If you see this, React is rendering')
+                    )
+                )
+            );
+        } else {
+            document.body.innerHTML = '<h1>ROOT NOT FOUND</h1>';
+        }
+    </script>
+</body>
+</html>
+
