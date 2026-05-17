@@ -1,11 +1,16 @@
-# Hosting-only build: publishes the Vite app immediately.
-# Backend deploy (pipeline-deploy) is temporarily skipped while SES/Cognito is fixed.
-# Restore fullstack build in amplify.fullstack.yml when backend deploy succeeds.
+# Full Gen2 build (backend + frontend). Use this after SES is verified and failed CF stack is deleted.
 version: 1
 customRules:
   - source: '</^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>'
     target: '/index.html'
     status: '200'
+backend:
+  phases:
+    build:
+      commands:
+        - npm ci --cache .npm --prefer-offline --legacy-peer-deps
+        - export CI=1
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
     preBuild:
@@ -13,7 +18,7 @@ frontend:
         - npm ci --cache .npm --prefer-offline --legacy-peer-deps
     build:
       commands:
-        - cp deploy/amplify_outputs.json amplify_outputs.json
+        - if [ ! -f amplify_outputs.json ]; then echo "ERROR Missing amplify_outputs.json" && exit 1; fi
         - npm run build
         - test -f dist/index.html || (echo "ERROR dist/index.html missing" && exit 1)
   artifacts:

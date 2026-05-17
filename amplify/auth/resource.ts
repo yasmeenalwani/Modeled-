@@ -11,13 +11,17 @@ export const auth = defineAuth({
   loginWith: {
     email: true,
   },
-  // SES for verification emails. Set AMPLIFY_SES_FROM_EMAIL to your SES-verified address, or replace below. See docs/SES_SMS_VERIFICATION_SETUP.md
-  senders: {
-    email: {
-      fromEmail: process.env.AMPLIFY_SES_FROM_EMAIL || 'noreply@modeledmgmt.com',
-      fromName: 'Modeled',
-    },
-  },
+  // Custom SES sender (optional). Omit senders to use Cognito default email until SES identity is verified.
+  ...(process.env.AMPLIFY_SES_FROM_EMAIL
+    ? {
+        senders: {
+          email: {
+            fromEmail: process.env.AMPLIFY_SES_FROM_EMAIL,
+            fromName: 'Modeled',
+          },
+        },
+      }
+    : {}),
   // Define user groups for role-based access
   groups: ['Model', 'Professional', 'Partner', 'Admin'],
   
