@@ -42,8 +42,8 @@ PHASE B — AWS console (do today; ~30–60 min)
 
 PHASE C — Full production backend + frontend (after B2 + B1)
 ------------------------------------------------------------
-[ ] In repo: replace amplify.yml with amplify.fullstack.yml (see team / commit)
-[ ] Push to master → Amplify build 20–40+ min
+[x] amplify.yml = fullstack (rollback: amplify.hosting-only.yml)
+[ ] Push to master → Amplify build 20–40+ min (IN PROGRESS after push)
 [ ] Build Succeeded → download amplify_outputs.json from Amplify (optional backup)
 [ ] Do NOT use deploy/ci-amplify-outputs.json anymore for production
 
