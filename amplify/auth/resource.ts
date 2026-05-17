@@ -14,7 +14,7 @@ export const auth = defineAuth({
   // SES for verification emails. Set AMPLIFY_SES_FROM_EMAIL to your SES-verified address, or replace below. See docs/SES_SMS_VERIFICATION_SETUP.md
   senders: {
     email: {
-      fromEmail: process.env.AMPLIFY_SES_FROM_EMAIL || 'noreply@modeled.app',
+      fromEmail: process.env.AMPLIFY_SES_FROM_EMAIL || 'noreply@modeledmgmt.com',
       fromName: 'Modeled',
     },
   },
