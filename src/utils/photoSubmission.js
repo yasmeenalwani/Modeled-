@@ -146,16 +146,9 @@ export async function triggerPhotoAnalysis(userId, photoKeys) {
  */
 export async function updateModelProfileWithPhotos(userId, uploadResults) {
   try {
-    const photoUrls = uploadResults.success.map(r => r.url);
-    const photoKeys = uploadResults.success.map(r => r.key);
-    const photoMetadata = uploadResults.success.reduce((acc, r) => {
-      acc[r.stepId] = {
-        key: r.key,
-        url: r.url,
-        uploadedAt: r.uploadedAt,
-      };
-      return acc;
-    }, {});
+    // ModelProfile only has photoUrls + headshotUrl in schema — store durable S3 paths (keys), not presigned URLs.
+    const photoPaths = uploadResults.success.map((r) => r.key).filter(Boolean);
+    const headshotPath = photoPaths[0] || null;
 
     if (!userId || !uploadResults?.success?.length) {
       throw new Error('Missing userId or upload results');
@@ -177,11 +170,10 @@ export async function updateModelProfileWithPhotos(userId, uploadResults) {
 
     const result = await modelProfile.update({
       id: profile.id,
-      photoUrls,
-      photoKeys,
-      photoMetadata: JSON.stringify(photoMetadata),
+      photoUrls: photoPaths,
+      headshotUrl: headshotPath,
       photoAnalysisStatus: 'pending',
-      analyzedPhotoCount: photoUrls.length,
+      analyzedPhotoCount: photoPaths.length,
       lastPhotoAnalysis: null, // Will be set after analysis completes
     });
 
@@ -203,7 +195,7 @@ export async function updateModelProfileWithPhotos(userId, uploadResults) {
 /**
  * Complete photo submission flow
  * 1. Upload all photos to S3
- * 2. Update ModelProfile with URLs
+ * 2. Update ModelProfile with S3 path keys (durable; presigned URLs expire)
  * 3. Trigger AI analysis
  */
 export async function submitPhotosForAnalysis(photos, userId) {

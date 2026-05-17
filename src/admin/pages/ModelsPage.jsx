@@ -133,7 +133,13 @@ async function resolveUrlFromPath(path) {
 
 async function resolvePrimaryPhoto(profile, mappedModel) {
   const photoMetadata = safeParseJson(profile?.photoMetadata, {});
+  const isHttpUrl = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
+  const pathLikeFromUrls = [
+    ...(Array.isArray(profile?.photoUrls) ? profile.photoUrls : []).filter((s) => typeof s === 'string' && !isHttpUrl(s)),
+    profile?.headshotUrl && !isHttpUrl(profile.headshotUrl) ? profile.headshotUrl : null,
+  ].filter(Boolean);
   const keyCandidates = [
+    ...pathLikeFromUrls,
     ...(Array.isArray(profile?.photoKeys) ? profile.photoKeys : []),
     ...Object.values(photoMetadata || {}).map((entry) => entry?.key),
   ].filter(Boolean);

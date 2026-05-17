@@ -460,7 +460,7 @@ export default function ModelDetailModal({ model, onClose, onUpdate }) {
   const directGalleryUrls = (() => {
     const out = [];
     const add = (u) => {
-      if (u && typeof u === 'string' && !out.includes(u)) out.push(u);
+      if (u && typeof u === 'string' && /^https?:\/\//i.test(u) && !out.includes(u)) out.push(u);
     };
     (model.photoUrls || []).forEach(add);
     add(model.headshotUrl);
@@ -475,6 +475,19 @@ export default function ModelDetailModal({ model, onClose, onUpdate }) {
     };
     (Array.isArray(model.photoKeys) ? model.photoKeys : []).forEach(add);
     Object.values(model.photoMetadata || {}).forEach((entry) => add(entry?.key));
+    const isHttp = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
+    (model.photoUrls || []).forEach((u) => {
+      if (u && typeof u === 'string' && !isHttp(u)) add(u);
+    });
+    if (model.headshotUrl && typeof model.headshotUrl === 'string' && !isHttp(model.headshotUrl)) {
+      add(model.headshotUrl);
+    }
+    if (model.idDocumentUrl && typeof model.idDocumentUrl === 'string' && !isHttp(model.idDocumentUrl)) {
+      add(model.idDocumentUrl);
+    }
+    if (model.verificationSelfieUrl && typeof model.verificationSelfieUrl === 'string' && !isHttp(model.verificationSelfieUrl)) {
+      add(model.verificationSelfieUrl);
+    }
     return keys;
   })();
   const isReadyForMatching = Object.values(approvalChecklist).every(Boolean) && status === 'approved';

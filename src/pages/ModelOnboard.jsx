@@ -645,16 +645,15 @@ function StepPhotos({ data, setData, userId, uploadEntityId }) {
       const result = await submitPhotosForAnalysis(photoData, storageOwnerId);
 
       if (result.success) {
-        const photoUrls = result.uploadResults.success.map(r => r.url);
-        const photoKeys = result.uploadResults.success.map(r => r.key);
-        if (!photoUrls.length) {
+        const photoKeys = result.uploadResults.success.map((r) => r.key).filter(Boolean);
+        if (!photoKeys.length) {
           setUploadError('No photos were saved. Please retry and check storage permissions.');
           return;
         }
-        
+
         const updatedData = {
           ...data,
-          photoUrls,
+          photoUrls: photoKeys,
           photoKeys,
           photoAnalysisStatus: result.analysisStatus?.status || 'pending',
           photosSubmitted: true,
@@ -2414,8 +2413,10 @@ export default function ModelOnboard() {
           ? formData.identityVerificationStatus
           : 'manual_review';
 
-      // Map formData to ModelProfile schema
-      const photoUrls = formData.photoUrls || [];
+      // Map formData to ModelProfile schema — persist S3 *path keys*, not presigned URLs (URLs expire and break admin thumbnails).
+      const keysFromUpload = Array.isArray(formData.photoKeys) ? formData.photoKeys.filter(Boolean) : [];
+      const legacyUrls = Array.isArray(formData.photoUrls) ? formData.photoUrls.filter(Boolean) : [];
+      const photoUrls = keysFromUpload.length > 0 ? keysFromUpload : legacyUrls;
       const headshotUrl = photoUrls.length > 0 ? photoUrls[0] : null;
       
       const profileData = {
