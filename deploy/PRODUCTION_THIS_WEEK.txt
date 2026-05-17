@@ -1,0 +1,71 @@
+MODELED — PRODUCTION THIS WEEK (checklist)
+============================================
+Canonical site: https://www.modeledmgmt.com
+
+PHASE A — Site visible (hosting-only build; may already be running)
+-----------------------------------------------------------------
+[ ] Amplify Deployment latest = Succeeded
+[ ] https://www.modeledmgmt.com shows Modeled landing (not Amplify "Welcome")
+
+PHASE B — AWS console (do today; ~30–60 min)
+--------------------------------------------
+1) SES (us-east-1)
+   [ ] Verified identity: modeledmgmt.com (domain) OR noreply@modeledmgmt.com
+   [ ] Request production access if still in sandbox (for public signups)
+
+2) CloudFormation (us-east-1) — REQUIRED before full backend deploy
+   [ ] Delete stack: amplify-d1e3z6pnoveipz-master-branch-7484328cc4
+       Status must be DELETE_COMPLETE (not ROLLBACK_COMPLETE)
+
+3) Cognito → User pool from NEW amplify_outputs.json after Phase C
+   (Pool ID changes after fresh deploy — update URLs on the NEW pool.)
+   App integration → App client → Hosted UI:
+   Allowed callback URLs (one per line):
+     https://www.modeledmgmt.com/
+     https://www.modeledmgmt.com
+     https://modeledmgmt.com/
+     https://modeledmgmt.com
+   Allowed sign-out URLs:
+     https://www.modeledmgmt.com/
+     https://www.modeledmgmt.com
+
+4) Cognito → Groups → ensure groups exist: Admin, Model, Professional, Partner
+   [ ] Add YOUR email user to group: Admin
+
+5) Amplify → modeled → Environment variables (branch master)
+     VITE_USE_MOCK_DATA = false
+     VITE_DEV_ADMIN_BYPASS = false
+     VITE_FULL_APP_ACCESS = false   (or true if you want all signed-in users in portals)
+     VITE_REQUIRE_ONBOARD_IDENTITY = false
+     (Optional backend build secret for custom email later:)
+     AMPLIFY_SES_FROM_EMAIL = noreply@modeledmgmt.com
+
+PHASE C — Full production backend + frontend (after B2 + B1)
+------------------------------------------------------------
+[ ] In repo: replace amplify.yml with amplify.fullstack.yml (see team / commit)
+[ ] Push to master → Amplify build 20–40+ min
+[ ] Build Succeeded → download amplify_outputs.json from Amplify (optional backup)
+[ ] Do NOT use deploy/ci-amplify-outputs.json anymore for production
+
+PHASE D — Smoke tests (incognito)
+---------------------------------
+[ ] https://www.modeledmgmt.com/join?role=model → sign up → submit → success
+[ ] https://www.modeledmgmt.com/admin → sign in as Admin
+[ ] Admin → Models → Pending → see test model + photos
+[ ] https://www.modeledmgmt.com/join?role=professional → submit
+[ ] Admin → Professionals → see test pro
+
+PHASE E — Admin “looks good”
+----------------------------
+[ ] Models: tabs Pending / Manual review / Approved filter correctly
+[ ] Model detail modal: photos, identity, approval checklist
+[ ] Professionals + Salons/Partners lists load real data (not mock names)
+
+TROUBLESHOOTING
+---------------
+redirect_mismatch → Cognito callback URLs (Phase B3)
+No verification email → SES sandbox / unverified sender
+Photos missing in admin → S3 upload + photoUrls store paths (fixed in code)
+Admin shows fake people → VITE_USE_MOCK_DATA=true in Amplify
+Build fails on npm → .npmrc + package-lock pushed
+Build fails on Cognito/SES → complete Phase B1–B2, no custom SES until verified

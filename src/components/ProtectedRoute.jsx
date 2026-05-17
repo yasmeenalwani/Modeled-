@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { isLocalDevHost } from '../utils/isLocalDevHost';
 
 /**
  * ProtectedRoute Component
@@ -26,9 +27,7 @@ export default function ProtectedRoute({
 
   const checkAuthorization = async () => {
     try {
-      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-      const isLocalDevHost = ['localhost', '127.0.0.1', 'modeledmgmt.com', 'www.modeledmgmt.com'].includes(hostname);
-      const devBypass = isLocalDevHost && import.meta.env?.VITE_DEV_ADMIN_BYPASS !== 'false';
+      const devBypass = isLocalDevHost() && import.meta.env?.VITE_DEV_ADMIN_BYPASS !== 'false';
 
       // Dev bypass: on localhost, allow access to admin (like before protection was added)
       if (allowedGroups.includes('Admin') && devBypass) {
@@ -111,22 +110,18 @@ export function useIsAdmin() {
 
   const checkAdminStatus = async () => {
     try {
-      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-      const isLocalDevHost = ['localhost', '127.0.0.1', 'modeledmgmt.com', 'www.modeledmgmt.com'].includes(hostname);
       const session = await fetchAuthSession();
       const tokens = session.tokens;
       if (!tokens) {
-        setIsAdmin(isLocalDevHost);
+        setIsAdmin(isLocalDevHost());
         return;
       }
       const groups = tokens.idToken?.payload?.['cognito:groups'] || [];
       let admin = groups.includes('Admin');
-      if (isLocalDevHost && !admin) admin = true;
+      if (isLocalDevHost() && !admin) admin = true;
       setIsAdmin(admin);
     } catch (error) {
-      const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-      const isLocalDevHost = ['localhost', '127.0.0.1', 'modeledmgmt.com', 'www.modeledmgmt.com'].includes(hostname);
-      setIsAdmin(isLocalDevHost);
+      setIsAdmin(isLocalDevHost());
     } finally {
       setIsLoading(false);
     }

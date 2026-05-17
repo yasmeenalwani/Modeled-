@@ -20,6 +20,7 @@ import PartnerWaitlist from "./pages/waitlist/PartnerWaitlist";
 import WaitlistThanks from "./pages/waitlist/WaitlistThanks";
 import PrivateBetaLaunch from "./components/PrivateBetaLaunch";
 import { useStrictAdmin } from "./components/ProtectedRoute";
+import { isLocalDevHost } from "./utils/isLocalDevHost";
 
 // Lazy load portal components to catch errors
 const ProPortalLayout = React.lazy(() => import("./portal/ProPortalLayout"));
@@ -366,9 +367,7 @@ function AuthenticatedApp() {
 
   // Match ProtectedRoute: on localhost, allow reaching /admin so dev bypass inside ProtectedRoute can run.
   // Without this, strictAdmin blocks the entire route tree and admin is unreachable in local dev.
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isLocalDevHost = ['localhost', '127.0.0.1', 'modeledmgmt.com', 'www.modeledmgmt.com'].includes(hostname);
-  const devAdminBypass = isLocalDevHost && import.meta.env?.VITE_DEV_ADMIN_BYPASS !== 'false';
+  const devAdminBypass = isLocalDevHost() && import.meta.env?.VITE_DEV_ADMIN_BYPASS !== 'false';
   const allowShellForLocalAdmin =
     devAdminBypass && (pathname === '/admin' || pathname.startsWith('/admin/'));
 
