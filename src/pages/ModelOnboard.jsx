@@ -7,6 +7,13 @@ import GuidedPhotoCapture from '../components/GuidedPhotoCapture';
 import IdentityVerification from '../components/IdentityVerification';
 import { submitPhotosForAnalysis } from '../utils/photoSubmission';
 import { shouldUseMockData } from '../utils/mockDataService';
+import { isLocalDevHost } from '../utils/isLocalDevHost';
+import {
+  ensureEmailVerificationCodeSent,
+  confirmEmailVerificationCode,
+  getCognitoEmailState,
+  formatVerificationError,
+} from '../utils/cognitoAttributeVerification';
 
 const client = generateClient();
 
@@ -1372,8 +1379,35 @@ function StepEmailVerification({ data, setData }) {
   const [error, setError] = useState(null);
   const [codeSent, setCodeSent] = useState(data?.emailVerified || false);
   const [verified, setVerified] = useState(data?.emailVerified || data?.emailVerificationSkipped || false);
+  const [cognitoEmail, setCognitoEmail] = useState(null);
 
   const useMock = shouldUseMockData();
+  const allowTestBypass = useMock || isLocalDevHost();
+
+  useEffect(() => {
+    if (allowTestBypass || verified) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const state = await getCognitoEmailState();
+        if (cancelled) return;
+        if (state.email) setCognitoEmail(state.email);
+        if (state.emailVerified) {
+          setVerified(true);
+          const updated = {
+            ...data,
+            emailVerified: true,
+            email: data?.email || state.email,
+          };
+          setData(updated);
+          saveProgress(updated);
+        }
+      } catch (err) {
+        console.warn('Could not read Cognito email state:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [allowTestBypass, verified]);
 
   const handleSendCode = async () => {
     if (!data?.email || !isValidEmail(data.email)) {
@@ -1383,15 +1417,22 @@ function StepEmailVerification({ data, setData }) {
     setIsSending(true);
     setError(null);
     try {
-      if (useMock || import.meta.env.DEV) {
+      if (allowTestBypass) {
         setCodeSent(true);
         return;
       }
-      await sendUserAttributeVerificationCode({ userAttributeKey: 'email' });
+      const result = await ensureEmailVerificationCodeSent(data.email);
+      if (result.status === 'already_verified') {
+        setVerified(true);
+        const updated = { ...data, emailVerified: true, email: result.email || data.email };
+        setData(updated);
+        saveProgress(updated);
+        return;
+      }
       setCodeSent(true);
     } catch (err) {
       console.error('Send email code error:', err);
-      setError(err.message || 'Could not send code. Try again.');
+      setError(formatVerificationError(err));
     } finally {
       setIsSending(false);
     }
@@ -1405,21 +1446,21 @@ function StepEmailVerification({ data, setData }) {
     setIsVerifying(true);
     setError(null);
     try {
-      if (useMock || import.meta.env.DEV) {
+      if (allowTestBypass) {
         setVerified(true);
         const updated = { ...data, emailVerified: true, emailVerificationCode: code };
         setData(updated);
         saveProgress(updated);
         return;
       }
-      await confirmUserAttribute({ userAttributeKey: 'email', confirmationCode: code.trim() });
+      await confirmEmailVerificationCode(code);
       setVerified(true);
       const updated = { ...data, emailVerified: true, emailVerificationCode: code };
       setData(updated);
       saveProgress(updated);
     } catch (err) {
       console.error('Verify email error:', err);
-      setError(err.message || 'Invalid code. Please try again.');
+      setError(formatVerificationError(err));
     } finally {
       setIsVerifying(false);
     }
@@ -1476,6 +1517,11 @@ function StepEmailVerification({ data, setData }) {
       </h3>
       <p style={{ color: '#5A3A2A', marginBottom: '2rem', fontSize: '0.95rem', fontFamily: '"Alike", "Georgia", serif' }}>
         We'll send a verification code to <strong>{data?.email || 'your email'}</strong>
+        {cognitoEmail && cognitoEmail.toLowerCase() !== (data?.email || '').toLowerCase() && (
+          <span style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+            Your sign-in email is <strong>{cognitoEmail}</strong>. Use the same address in Basic Info, or we&apos;ll update your account to match.
+          </span>
+        )}
       </p>
 
       {!codeSent ? (
@@ -1501,26 +1547,28 @@ function StepEmailVerification({ data, setData }) {
           >
             {isSending ? 'Sending...' : 'Send Verification Code'}
           </button>
-          <button
-            onClick={() => {
-              const updated = { ...data, emailVerified: true, emailVerificationSkipped: true };
-              setData(updated);
-              saveProgress(updated);
-            }}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              fontSize: '0.9rem',
-              borderRadius: '12px',
-              border: '1px solid rgba(139, 30, 63, 0.3)',
-              background: 'transparent',
-              color: '#4A2A1A', // Dark brown
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-            }}
-          >
-            Skip for now (Testing)
-          </button>
+          {allowTestBypass && (
+            <button
+              onClick={() => {
+                const updated = { ...data, emailVerified: true, emailVerificationSkipped: true };
+                setData(updated);
+                saveProgress(updated);
+              }}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '0.9rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(139, 30, 63, 0.3)',
+                background: 'transparent',
+                color: '#4A2A1A',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              Skip for now (local testing only)
+            </button>
+          )}
         </div>
       ) : (
         <div>
@@ -1618,7 +1666,7 @@ function StepPhoneVerification({ data, setData }) {
   const [error, setError] = useState(null);
   const [codeSent, setCodeSent] = useState(data?.phoneVerified || false);
   const [verified, setVerified] = useState(data?.phoneVerified || data?.phoneVerificationSkipped || false);
-  const useMock = shouldUseMockData();
+  const allowTestBypass = shouldUseMockData() || isLocalDevHost();
 
   const handleSendCode = async () => {
     if (!data?.phone || data.phone.replace(/[^\d]/g, '').length !== 10) {
@@ -1628,7 +1676,7 @@ function StepPhoneVerification({ data, setData }) {
     setIsSending(true);
     setError(null);
     try {
-      if (useMock || import.meta.env.DEV) {
+      if (allowTestBypass) {
         setCodeSent(true);
         return;
       }
@@ -1658,7 +1706,7 @@ function StepPhoneVerification({ data, setData }) {
     setIsVerifying(true);
     setError(null);
     try {
-      if (useMock || import.meta.env.DEV) {
+      if (allowTestBypass) {
         setVerified(true);
         const updated = { ...data, phoneVerified: true, phoneVerificationCode: code };
         setData(updated);

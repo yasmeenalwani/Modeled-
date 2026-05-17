@@ -64,7 +64,15 @@ PHASE E — Admin “looks good”
 TROUBLESHOOTING
 ---------------
 redirect_mismatch → Cognito callback URLs (Phase B3)
-No verification email → SES sandbox / unverified sender
+No verification email → SES sandbox / unverified sender (see EMAIL VERIFICATION below)
+
+EMAIL VERIFICATION (onboarding + sign-up)
+-----------------------------------------
+[ ] SES identity modeledmgmt.com (or noreply@modeledmgmt.com) = Verified
+[ ] SES out of sandbox OR add test recipient emails as Verified identities
+[ ] Amplify: do NOT set AMPLIFY_SES_FROM_EMAIL until sender is Verified (or Cognito default email is used)
+[ ] Basic Info email MUST match sign-up email (app now syncs Cognito before sending code)
+[ ] Check spam; code is from Amazon Cognito / Modeled
 Photos missing in admin → S3 upload + photoUrls store paths (fixed in code)
 Admin shows fake people → VITE_USE_MOCK_DATA=true in Amplify
 Build fails on npm → .npmrc + package-lock pushed
