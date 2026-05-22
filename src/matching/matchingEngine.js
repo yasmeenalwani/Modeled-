@@ -862,7 +862,8 @@ export function calculateAttributeScore(model, request, serviceType) {
     };
   }
   
-  const normalizedScore = totalWeight > 0 ? (totalScore / totalWeight) : 0;
+  // No criteria (or all "Any") → neutral 100, not 0 (0 was capping everyone below minScore)
+  const normalizedScore = totalWeight > 0 ? (totalScore / totalWeight) : 100;
   
   return {
     totalScore: Math.round(normalizedScore),
@@ -1179,9 +1180,11 @@ export function calculateMatchScore(model, request) {
       reachabilityScore * weights.reachability
   );
 
-  // Attribute floor: poor attribute fit cannot get a high overall score (prioritize requested attributes)
+  // Attribute floor: only when criteria were actually scored
   const attrScore = attributeResult.totalScore;
-  if (attrScore < 50) {
+  const hadCriteria =
+    attributeResult.breakdown && Object.keys(attributeResult.breakdown).length > 0;
+  if (hadCriteria && attrScore < 50) {
     finalScore = Math.min(finalScore, Math.round(attrScore + 15));
   }
 
@@ -1387,17 +1390,34 @@ function availabilityLocationScore(model, request, travelMinutes) {
 function isModelOpenToService(model, serviceType) {
   // Map service types to preference fields
   const servicePreferenceMap = {
-    'haircut': 'openToHaircut',
-    'color': 'openToColor',
-    'blowdry': 'openToStyling',
-    'blowout': 'openToStyling',
-    'styling': 'openToStyling',
-    'makeup': 'openToMakeup',
-    'nails': 'openToNails',
-    'skincare': 'openToSkincare',
-    'gloss': 'openToColor', // Gloss is a color service
-    'highlights': 'openToColor', // Highlights is a color service
-    'keratin': 'openToStyling', // Keratin is a styling treatment
+    haircut: 'openToHaircut',
+    mens_cut: 'openToHaircut',
+    color: 'openToColor',
+    highlights: 'openToColor',
+    balayage: 'openToColor',
+    gloss: 'openToColor',
+    root_touchup: 'openToColor',
+    color_correction: 'openToColor',
+    blowdry: 'openToStyling',
+    blowout: 'openToStyling',
+    styling: 'openToStyling',
+    updo: 'openToStyling',
+    keratin: 'openToStyling',
+    deep_conditioning: 'openToStyling',
+    scalp_treatment: 'openToStyling',
+    extensions: 'openToHaircut',
+    extensions_consult: 'openToHaircut',
+    makeup: 'openToMakeup',
+    brows: 'openToMakeup',
+    lashes: 'openToMakeup',
+    bridal_makeup: 'openToMakeup',
+    nails_manicure: 'openToNails',
+    nails_pedi: 'openToNails',
+    nails: 'openToNails',
+    skincare: 'openToSkincare',
+    waxing: 'openToSkincare',
+    bridal_hair: 'openToStyling',
+    bridal_trial: 'openToStyling',
   };
   
   const preferenceField = servicePreferenceMap[serviceType];
@@ -1418,14 +1438,16 @@ function isModelOpenToService(model, serviceType) {
  * Find and rank all matching models for a request
  */
 export function findMatches(models, request, options = {}) {
-  const { minScore = 30, limit = 20 } = options;
+  const { minScore = 30, limit = 20, requireValidCard = true } = options;
   
   const matches = models
     .filter(model => {
-      // Card on file required for matching - exclude models without valid card
-      const cardStatus = model.cardOnFileStatus || 'none';
-      if (cardStatus !== 'valid') {
-        return false;
+      // Card on file — required for model self-serve; admin can bypass at launch
+      if (requireValidCard) {
+        const cardStatus = model.cardOnFileStatus || 'none';
+        if (cardStatus !== 'valid') {
+          return false;
+        }
       }
       // Check if model is open to the requested service
       if (request.serviceType && !isModelOpenToService(model, request.serviceType)) {
@@ -1443,10 +1465,15 @@ export function findMatches(models, request, options = {}) {
     .sort((a, b) => b.finalScore - a.finalScore)
     .slice(0, limit);
   
+  const excludedNoCard = requireValidCard
+    ? models.filter((m) => (m.cardOnFileStatus || 'none') !== 'valid').length
+    : 0;
+
   return {
     matches,
     totalCandidates: models.length,
     qualifiedMatches: matches.length,
+    excludedNoCard,
     averageScore: matches.length > 0 
       ? Math.round(matches.reduce((sum, m) => sum + m.finalScore, 0) / matches.length)
       : 0,

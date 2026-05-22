@@ -8,6 +8,7 @@ import { runMatchingEngine, convertRequestForMatching } from '../../utils/matchi
 import { getMockRequests, getMockProfessional, getMockModels, getMockModel, shouldUseMockData, updateMockRequest } from '../../utils/mockDataService';
 import { createMatch, createMatchesForRequest, approveMatches, sendMatchesToModels, getMatchesForRequest } from '../../utils/matchService';
 import { createNotification } from '../../utils/createNotification';
+import { buildMatchCriteriaFromRequest } from '../../utils/requestIntakeOptions';
 
 let client = null;
 // In demo mode, never initialize client to prevent database access
@@ -418,15 +419,7 @@ function convertRequestToMatchingFormat(request, professional) {
     duration: request.duration || 60,
     salonCoords,
     salonZip,
-    criteria: {
-      hairLength: request.desiredHairLength || request.criteria?.hairLength || 'Any',
-      hairColor: request.desiredHairColor || request.criteria?.hairColor || 'Any',
-      hairTexture: request.desiredHairTexture || request.criteria?.hairTexture || 'Any',
-      hairCondition: request.desiredHairCondition || request.criteria?.hairCondition || 'Any',
-      virginHair: (request.desiredHairCondition === 'virgin') || request.criteria?.virginHair || false,
-      openToChange: request.criteria?.openToChange ?? true,
-      desiredCutStyle: request.desiredCutStyle ?? request.criteria?.desiredCutStyle ?? null,
-    },
+    criteria: buildMatchCriteriaFromRequest(request),
   };
 }
 
@@ -661,7 +654,7 @@ export default function MatchEnginePage() {
       await sendMatchesToModels(matchIds);
 
       // 3. Mark request as 'sent' (models now have active booking invitations)
-      updateMockRequest(requestId, { status: 'sent' });
+      updateMockRequest(requestId, { status: 'matched' });
 
       const count = createdMatches.length > 0 ? createdMatches.length : selectedCount;
       alert(`Booking links sent to ${count} model(s)! The pro will see their confirmed match once a model accepts and pays.`);

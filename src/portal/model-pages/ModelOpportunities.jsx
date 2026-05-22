@@ -503,10 +503,11 @@ export default function ModelOpportunities() {
   const loadModelProfile = async () => {
     try {
       // Try to load from database first
-      if (user?.userId) {
+      const authUserId = user?.userId || user?.username || user?.userSub;
+      if (authUserId) {
         try {
           const { data: profiles } = await client.models.ModelProfile.list({
-            filter: { userId: { eq: user.userId } },
+            filter: { userId: { eq: authUserId } },
             limit: 1,
           });
           const profile = (profiles && profiles.length > 0) ? profiles[0] : null;

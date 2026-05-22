@@ -27,6 +27,31 @@ try {
   client = null;
 }
 
+/** Strip fields / values the live API may reject on ModelRequest.create */
+function sanitizeModelRequestCreatePayload(payload) {
+  const out = { ...payload };
+  const nullableEnums = [
+    'desiredHairLength',
+    'desiredHairTexture',
+    'desiredHairCondition',
+  ];
+  nullableEnums.forEach((key) => {
+    if (out[key] === null || out[key] === undefined || out[key] === '') {
+      delete out[key];
+    }
+  });
+  if (out.desiredHairColor === null || out.desiredHairColor === '') {
+    delete out.desiredHairColor;
+  }
+  if (out.priority === null || out.priority === undefined) {
+    out.priority = 'normal';
+  }
+  if (out.status === null || out.status === undefined) {
+    out.status = 'matching';
+  }
+  return out;
+}
+
 const mapToBackendStatus = (status) => {
   if (!status) return status;
   if (status === 'booked') return 'approved';
@@ -171,12 +196,20 @@ export async function createRequest(requestData) {
 
     if (!shouldUseMockData() && client?.models?.ModelRequest && typeof client.models.ModelRequest.create === 'function') {
       try {
-        const { data: request, errors } = await client.models.ModelRequest.create(payload);
-        if (errors) throw new Error(errors[0]?.message);
-        return normalizeRequest(request);
+        const safePayload = sanitizeModelRequestCreatePayload(payload);
+        const { data: request, errors } = await client.models.ModelRequest.create(safePayload);
+        if (errors?.length) throw new Error(errors[0]?.message || 'ModelRequest.create failed');
+        if (request) return normalizeRequest(request);
       } catch (dbError) {
-        console.error('[requestService] Database error createRequest:', dbError);
-        throw dbError;
+        console.error('[requestService] Database createRequest failed, saving locally:', dbError);
+        const mock = createMockRequest({
+          ...requestData,
+          status: requestData.status,
+          _savedLocally: true,
+          _dbError: dbError?.message || String(dbError),
+        });
+        mock._usedLocalFallback = true;
+        return mock;
       }
     }
 

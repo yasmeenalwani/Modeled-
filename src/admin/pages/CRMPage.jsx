@@ -439,6 +439,20 @@ export default function CRMPage() {
 
   return (
     <div style={styles.container}>
+      <div style={{
+        marginBottom: '1.5rem',
+        padding: '1rem 1.25rem',
+        borderRadius: '10px',
+        background: 'rgba(255,193,7,0.1)',
+        border: '1px solid rgba(255,193,7,0.35)',
+        fontSize: '0.9rem',
+        lineHeight: 1.5,
+        color: 'rgba(255,255,255,0.85)',
+      }}>
+        <strong>Email outreach paused:</strong> Amazon SES production access is not approved on this account yet.
+        CRM send actions will not deliver until SES is approved or you connect an alternate provider (e.g. Resend/Postmark).
+        Onboarding review and in-app workflows are unaffected.
+      </div>
       {/* Header */}
       <div style={styles.header}>
         <div>

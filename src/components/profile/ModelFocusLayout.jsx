@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { collectModelPhotoRefs, resolveModelPhotoUrl } from '../../utils/modelPhotoResolver';
+import ResolvedProfileImage from './ResolvedProfileImage';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = { monday: 'Mon', tuesday: 'Tue', wednesday: 'Wed', thursday: 'Thu', friday: 'Fri', saturday: 'Sat', sunday: 'Sun' };
@@ -186,13 +188,48 @@ function parseAvailability(availability) {
   return out;
 }
 
-export default function ModelFocusLayout({ model }) {
-  const photoUrls = model?.photoUrls || [];
-  const headshotUrl = model?.headshotUrl;
-  const portfolioImages = headshotUrl
-    ? [headshotUrl, ...photoUrls].filter(Boolean)
-    : [...photoUrls].filter(Boolean);
-  const portfolioTiles = Math.max(4, Math.ceil(portfolioImages.length / 4) * 4);
+function PortfolioCell({ photoRef, index, name }) {
+  if (!photoRef) {
+    return 'Add photo';
+  }
+  return (
+    <>
+      <ResolvedProfileImage
+        photoRef={photoRef}
+        name={name}
+        style={styles.galleryImage}
+        alt={`Portfolio ${index + 1}`}
+      />
+      <div style={styles.galleryOverlay}>Portfolio</div>
+    </>
+  );
+}
+
+export default function ModelFocusLayout({ model, resolvedPhotoUrls }) {
+  const [portfolioRefs, setPortfolioRefs] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      if (Array.isArray(resolvedPhotoUrls) && resolvedPhotoUrls.length > 0) {
+        if (!cancelled) setPortfolioRefs(resolvedPhotoUrls);
+        return;
+      }
+
+      const refs = collectModelPhotoRefs(model);
+      const urls = [];
+      for (const ref of refs) {
+        const url = await resolveModelPhotoUrl(ref);
+        if (url && !urls.includes(url)) urls.push(url);
+      }
+      if (!cancelled) setPortfolioRefs(urls);
+    })();
+
+    return () => { cancelled = true; };
+  }, [model?.id, resolvedPhotoUrls]);
+
+  const portfolioImages = portfolioRefs;
 
   const preferences = [
     model?.somethingFun,
@@ -218,17 +255,11 @@ export default function ModelFocusLayout({ model }) {
             <div style={{ ...styles.infoTitle, marginBottom: '0.75rem' }}>Portfolio</div>
             <div style={styles.galleryGrid}>
               {Array.from({ length: 6 }).map((_, i) => {
-                const url = portfolioImages[i];
+                const photoRef = portfolioImages[i];
+                const name = model?.firstName ? `${model.firstName} ${model.lastName || ''}` : 'Model';
                 return (
                   <div key={i} style={styles.galleryCard}>
-                    {url ? (
-                      <>
-                        <img src={url} alt={`Portfolio ${i + 1}`} style={styles.galleryImage} />
-                        <div style={styles.galleryOverlay}>Portfolio</div>
-                      </>
-                    ) : (
-                      'Add photo'
-                    )}
+                    <PortfolioCell photoRef={photoRef} index={i} name={name} />
                   </div>
                 );
               })}

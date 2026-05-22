@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
 import { shouldUseMockData } from '../utils/mockDataService';
+import { getAuthenticatorUserId } from '../utils/authUtils';
 
 const client = generateClient();
 
@@ -80,7 +81,7 @@ export default function PortalStatusGate({ userType, children }) {
   const [error, setError] = useState(null);
   const [wrongPortal, setWrongPortal] = useState(null); // { redirectTo: '/model-portal' } when user has different profile
 
-  const userId = user?.userId || user?.username || user?.userSub;
+  const userId = getAuthenticatorUserId(user);
 
   useEffect(() => {
     const mockMode = shouldUseMockData();

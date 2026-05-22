@@ -1,4 +1,5 @@
 import React from 'react';
+import ResolvedProfileImage from './ResolvedProfileImage';
 
 const styles = {
   card: {
@@ -122,7 +123,8 @@ export default function ModelCardOverview({
 }) {
   const firstName = model?.firstName || '';
   const lastName = model?.lastName || '';
-  const headshotUrl = model?.headshotUrl;
+  const avatarPhotoRef =
+    model?.primaryPhotoUrl || model?.coverPhotoRef || model?.headshotUrl;
   const locationZip = model?.locationZip;
   const baseBio = model?.bio || [model?.whatYouCareAbout, model?.somethingFun].filter(Boolean).join(' ') || null;
   // For demo, give Seraphina and other models a slightly richer default paragraph if none is set.
@@ -140,9 +142,17 @@ export default function ModelCardOverview({
     <div style={styles.card}>
       <div style={styles.avatarSection}>
         <div style={styles.avatar}>
-          {headshotUrl ? (
-            <img src={headshotUrl} alt={`${firstName} ${lastName}`} style={styles.avatarImage} />
-          ) : null}
+          {avatarPhotoRef ? (
+            <ResolvedProfileImage
+              photoRef={avatarPhotoRef}
+              name={`${firstName} ${lastName}`}
+              style={styles.avatarImage}
+              alt={`${firstName} ${lastName}`}
+              fallbackFontSize="4rem"
+            />
+          ) : (
+            <span>{firstName?.charAt(0) || '?'}</span>
+          )}
         </div>
       </div>
 

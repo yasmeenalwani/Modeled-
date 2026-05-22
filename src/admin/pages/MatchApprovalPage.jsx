@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/data';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { findMatches, calculateMatchScore } from '../../matching/matchingEngine';
@@ -9,6 +10,7 @@ import { getProfessionalById } from '../../utils/profileService';
 import { getMockRequests, getMockProfessional, getMockModel, getMockModels, updateMockRequest, createMockMatch, shouldUseMockData } from '../../utils/mockDataService';
 import { getAllMatches, getMatchesByStatus, updateMatchStatus, approveMatch, sendMatchToModel, approveMatches, sendMatchesToModels, createMatchesForRequest } from '../../utils/matchService';
 import WaitlistPanel from '../components/WaitlistPanel';
+import { buildMatchCriteriaFromRequest, parseExtendedCriteria } from '../../utils/requestIntakeOptions';
 
 let client;
 try {
@@ -336,6 +338,27 @@ function getScoreColor(score) {
  * Convert ModelProfile from DynamoDB to format expected by matching engine
  */
 function convertModelForMatching(modelProfile) {
+  const hairColor =
+    modelProfile.hairColorSimple ||
+    modelProfile.autoTaggedAttributes?.hairColor ||
+    modelProfile.hairColor;
+  const hairLength =
+    modelProfile.hairLengthSimple ||
+    modelProfile.autoTaggedAttributes?.hairLength ||
+    modelProfile.hairLength;
+  const hairTexture =
+    modelProfile.hairTextureSimple ||
+    modelProfile.autoTaggedAttributes?.hairTexture ||
+    modelProfile.hairTexture;
+  const hairCondition =
+    modelProfile.hairCondition ||
+    modelProfile.autoTaggedAttributes?.hairCondition;
+
+  const isApproved =
+    modelProfile.status === 'approved' ||
+    modelProfile.status === 'active' ||
+    modelProfile.id?.startsWith('mock-');
+
   return {
     id: modelProfile.id,
     userId: modelProfile.userId,
@@ -344,36 +367,49 @@ function convertModelForMatching(modelProfile) {
     email: modelProfile.email,
     phone: modelProfile.phone,
     
-    // Physical attributes (use auto-tagged if available, fallback to manual)
-    hairColor: modelProfile.autoTaggedAttributes?.hairColor || modelProfile.hairColor,
-    hairLength: modelProfile.autoTaggedAttributes?.hairLength || modelProfile.hairLength,
-    hairTexture: modelProfile.autoTaggedAttributes?.hairTexture || modelProfile.hairTexture,
-    hairCondition: modelProfile.autoTaggedAttributes?.hairCondition || modelProfile.hairCondition,
-    skinTone: modelProfile.autoTaggedAttributes?.skinTone || modelProfile.skinTone,
-    
-    // Location & availability
+    hairColor,
+    hairLength,
+    hairTexture,
+    hairCondition,
+    hairColorSimple: hairColor,
+    hairLengthSimple: hairLength,
+    hairTextureSimple: hairTexture,
+    skinTone: modelProfile.skinTone || modelProfile.autoTaggedAttributes?.skinTone,
+    ageRange: modelProfile.ageRange,
     locationZip: modelProfile.locationZip,
     availability: modelProfile.availability || {},
     willingToTravel: modelProfile.willingToTravel,
     travelRadius: modelProfile.travelRadius,
     
-    // Services
-    openToHaircut: modelProfile.openToHaircut,
-    openToColor: modelProfile.openToColor,
-    openToStyling: modelProfile.openToStyling,
+    openToHaircut: modelProfile.openToHaircut !== false,
+    openToColor: modelProfile.openToColor !== false,
+    openToStyling: modelProfile.openToStyling !== false,
+    openToMakeup: modelProfile.openToMakeup !== false,
+    services: modelProfile.services || [],
+    cardOnFileStatus:
+      modelProfile.cardOnFileStatus === 'valid' || isApproved
+        ? 'valid'
+        : modelProfile.cardOnFileStatus || 'none',
     
-    // Agentic scores (from Booking history - TODO: calculate from real data)
-    agenticScores: {
-      reliability: 85, // TODO: Calculate from bookings
-      feedback: 90,    // TODO: Calculate from feedback
-      experience: 75,  // TODO: Calculate from total bookings
-      engagement: 80,  // TODO: Calculate from profile completeness
-      compatibility: 70, // TODO: Calculate from service history
-    },
-    
-    // Stats
-    totalBookings: 0, // TODO: Count from Booking records
-    repeatBookings: 0, // TODO: Count from Booking records
+    agenticScores: (() => {
+      let agentic = modelProfile.agenticScores && typeof modelProfile.agenticScores === 'object'
+        ? { ...modelProfile.agenticScores }
+        : {};
+      if (Object.keys(agentic).length === 0) {
+        agentic = {
+          reliability: modelProfile.reliabilityScore ?? 0,
+          feedback: modelProfile.feedbackScore ?? 0,
+          experience: modelProfile.experienceScore ?? 0,
+          engagement: modelProfile.engagementScore ?? 0,
+          compatibility: modelProfile.compatibilityScore ?? 0,
+        };
+      }
+      return agentic;
+    })(),
+    totalBookings: modelProfile.repeatBookings != null
+      ? (modelProfile.servicesCompleted?.length || modelProfile.totalBookings || 0)
+      : 0,
+    repeatBookings: modelProfile.repeatBookings || 0,
   };
 }
 
@@ -396,6 +432,7 @@ function convertRequestForMatching(request, professional) {
     professional: professional ? `${professional.firstName} ${professional.lastName}` : 'Unknown',
     salon: professional?.salonName || 'Unknown Salon',
     serviceId: request.serviceType,
+    serviceType: request.serviceType,
     service: request.serviceType,
     requestedDate: request.requestedDate,
     requestedTime: request.requestedTime,
@@ -403,20 +440,30 @@ function convertRequestForMatching(request, professional) {
     salonCoords,
     salonZip,
     duration: request.duration,
-    criteria: {
-      hairColor: request.desiredHairColor,
-      hairLength: request.desiredHairLength,
-      hairTexture: request.desiredHairTexture,
-      hairCondition: request.desiredHairCondition,
-      virginHair: request.desiredHairCondition === 'virgin',
-      openToChange: request.criteria?.openToChange ?? request.openToChange ?? true,
-      desiredCutStyle: request.desiredCutStyle ?? request.criteria?.desiredCutStyle ?? null,
-    },
+    criteria: buildMatchCriteriaFromRequest(request),
   };
+}
+
+function prepareModelsForMatchingEngine(modelsList, mockModelsList) {
+  const fromDb = (modelsList || []).map(convertModelForMatching);
+  const fromMock = (mockModelsList || []).map((m) =>
+    convertModelForMatching({
+      ...m,
+      id: typeof m.id === 'number' ? `mock-${m.id}` : m.id,
+      status: 'active',
+      cardOnFileStatus: 'valid',
+    })
+  );
+  const byId = new Map();
+  [...fromDb, ...fromMock].forEach((m) => {
+    if (m?.id) byId.set(m.id, m);
+  });
+  return [...byId.values()];
 }
 
 export default function MatchApprovalPage() {
   const { user } = useAuthenticator();
+  const [searchParams] = useSearchParams();
   const [requests, setRequests] = useState([]);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [models, setModels] = useState([]);
@@ -427,6 +474,7 @@ export default function MatchApprovalPage() {
   const [sortBy, setSortBy] = useState('score');
   const [processing, setProcessing] = useState(false);
   const [pendingMatches, setPendingMatches] = useState([]);
+  const [matchRunKey, setMatchRunKey] = useState(0);
 
   // Load data
   useEffect(() => {
@@ -457,17 +505,15 @@ export default function MatchApprovalPage() {
       // Try to load real data, fall back to mock if empty or error
       if (!shouldUseMockData() && client && client.models) {
         try {
-          const { data: realRequests } = await client.models.ModelRequest.list({
-            filter: { status: { eq: 'matching' } },
-            limit: 100,
-          });
-          requestsData = realRequests || [];
+          const { data: realRequests } = await client.models.ModelRequest.list({ limit: 200 });
+          requestsData = (realRequests || []).filter((r) =>
+            ['matching', 'pending', 'matched'].includes(r.status)
+          );
 
-          const { data: realModels } = await client.models.ModelProfile.list({
-            filter: { or: [{ status: { eq: 'active' } }, { status: { eq: 'approved' } }] },
-            limit: 500,
-          });
-          modelsData = realModels || [];
+          const { data: realModels } = await client.models.ModelProfile.list({ limit: 500 });
+          modelsData = (realModels || []).filter((m) =>
+            ['active', 'approved', 'pending'].includes(m.status)
+          );
 
           const { data: realProfessionals } = await client.models.Professional.list({
             limit: 100,
@@ -478,7 +524,15 @@ export default function MatchApprovalPage() {
         }
       }
 
-      // Use mock data if no real data available or mock mode enabled
+      const mockRequests = getMockRequests().filter((r) =>
+        ['matching', 'pending', 'matched'].includes(r.status)
+      );
+      const requestById = new Map();
+      [...requestsData, ...mockRequests].forEach((r) => {
+        if (r?.id) requestById.set(r.id, r);
+      });
+      requestsData = [...requestById.values()];
+
       if (requestsData.length === 0 || shouldUseMockData()) {
         console.log('Using mock requests for testing');
         requestsData = getMockRequests({ status: 'matching' });
@@ -488,24 +542,12 @@ export default function MatchApprovalPage() {
       }
       if (modelsData.length === 0) {
         console.log('Using mock models for testing');
-        // Convert mock models to ModelProfile format
-        modelsData = mockModels.map(model => ({
+        modelsData = mockModels.map((model) => ({
           id: `mock-${model.id}`,
           userId: `user-${model.id}`,
-          firstName: model.firstName,
-          lastName: model.lastName,
-          email: model.email,
-          phone: model.phone,
-          hairColor: model.hairColor,
-          hairLength: model.hairLength,
-          hairTexture: model.hairTexture,
-          hairCondition: model.hairCondition,
-          locationZip: model.locationZip,
-          availability: model.availability,
-          openToHaircut: model.services?.includes('haircut'),
-          openToColor: model.services?.includes('color'),
-          openToStyling: model.services?.includes('blowdry'),
+          ...model,
           status: 'active',
+          cardOnFileStatus: 'valid',
         }));
       }
       if (professionalsData.length === 0 || shouldUseMockData()) {
@@ -521,10 +563,13 @@ export default function MatchApprovalPage() {
       setModels(modelsData);
       setProfessionals(professionalsData);
 
-      // Auto-select first request
-      if (requestsData.length > 0 && !selectedRequestId) {
-        setSelectedRequestId(requestsData[0].id);
-      }
+      const urlRequestId = searchParams.get('requestId');
+      setSelectedRequestId((prev) => {
+        if (urlRequestId && requestsData.some((r) => r.id === urlRequestId)) return urlRequestId;
+        if (prev && requestsData.some((r) => r.id === prev)) return prev;
+        return requestsData[0]?.id ?? null;
+      });
+      setMatchRunKey((k) => k + 1);
     } catch (err) {
       console.error('Error loading data:', err);
       setError(err.message);
@@ -571,22 +616,23 @@ export default function MatchApprovalPage() {
 
   // Run matching engine
   const matchResult = useMemo(() => {
-    if (!selectedRequest || models.length === 0) {
-      return { matches: [], qualifiedMatches: 0, averageScore: 0 };
+    if (!selectedRequest) {
+      return { matches: [], qualifiedMatches: 0, averageScore: 0, totalCandidates: 0 };
     }
 
     const requestForMatching = convertRequestForMatching(selectedRequest, selectedProfessional);
-    
-      // Use mock models directly if we're using mock data
-      let modelsForMatching;
-      if (selectedRequest.id?.startsWith('mock-')) {
-        modelsForMatching = mockModels; // Use mock models directly
-      } else {
-        modelsForMatching = models.map(convertModelForMatching);
-      }
+    const modelsForMatching = prepareModelsForMatchingEngine(models, mockModels);
 
-    return findMatches(modelsForMatching, requestForMatching, { minScore: 30, limit: 20 });
-  }, [selectedRequest, models, selectedProfessional]);
+    if (modelsForMatching.length === 0) {
+      return { matches: [], qualifiedMatches: 0, averageScore: 0, totalCandidates: 0 };
+    }
+
+    return findMatches(modelsForMatching, requestForMatching, {
+      minScore: 20,
+      limit: 30,
+      requireValidCard: false,
+    });
+  }, [selectedRequest, models, selectedProfessional, matchRunKey]);
 
   // Sort matches
   const matchedModels = useMemo(() => {
@@ -661,22 +707,22 @@ export default function MatchApprovalPage() {
       await sendMatchesToModels(matchIds);
       console.log('Matches sent to models');
 
-      // Update request status to 'sent' — matches have been sent to models
+      // Update request status — matches sent to models (schema: matched, not sent)
       if (shouldUseMockData()) {
-        updateMockRequest(requestId, { status: 'sent' });
+        updateMockRequest(requestId, { status: 'matched' });
       } else {
         if (client && client.models) {
           try {
             await client.models.ModelRequest.update({
               id: requestId,
-              status: 'sent',
+              status: 'matched',
             });
           } catch (error) {
             console.error('Error updating request status:', error);
-            updateMockRequest(requestId, { status: 'sent' });
+            updateMockRequest(requestId, { status: 'matched' });
           }
         } else {
-          updateMockRequest(requestId, { status: 'sent' });
+          updateMockRequest(requestId, { status: 'matched' });
         }
       }
 
@@ -839,38 +885,34 @@ export default function MatchApprovalPage() {
 
             <div style={styles.panelTitle}>Match Criteria</div>
             <div style={styles.criteriaGrid}>
-              {selectedRequest.desiredHairColor && (
-                <div style={styles.criteriaItem}>
-                  <div style={styles.criteriaLabel}>Hair Color</div>
-                  <div style={styles.criteriaValue}>{selectedRequest.desiredHairColor}</div>
-                </div>
-              )}
-              {selectedRequest.desiredHairLength && (
-                <div style={styles.criteriaItem}>
-                  <div style={styles.criteriaLabel}>Length</div>
-                  <div style={styles.criteriaValue}>{selectedRequest.desiredHairLength}</div>
-                </div>
-              )}
-              {selectedRequest.desiredHairTexture && (
-                <div style={styles.criteriaItem}>
-                  <div style={styles.criteriaLabel}>Texture</div>
-                  <div style={styles.criteriaValue}>{selectedRequest.desiredHairTexture}</div>
-                </div>
-              )}
-              {selectedRequest.desiredHairCondition && (
-                <div style={styles.criteriaItem}>
-                  <div style={styles.criteriaLabel}>Condition</div>
-                  <div style={styles.criteriaValue}>{selectedRequest.desiredHairCondition}</div>
-                </div>
-              )}
+              {[
+                ['Hair color', selectedRequest.desiredHairColor],
+                ['Length', selectedRequest.desiredHairLength],
+                ['Texture', selectedRequest.desiredHairTexture],
+                ['Condition', selectedRequest.desiredHairCondition],
+                ...Object.entries(parseExtendedCriteria(selectedRequest.adminNotes)).map(([k, v]) => [
+                  k.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()),
+                  typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v),
+                ]),
+              ]
+                .filter(([, v]) => v != null && v !== '' && v !== 'any')
+                .map(([label, value]) => (
+                  <div key={label} style={styles.criteriaItem}>
+                    <div style={styles.criteriaLabel}>{label}</div>
+                    <div style={styles.criteriaValue}>{value}</div>
+                  </div>
+                ))}
             </div>
 
             <button
               style={styles.runEngineBtn}
-              onClick={loadData}
-              disabled={processing}
+              onClick={() => {
+                setMatchRunKey((k) => k + 1);
+                loadData();
+              }}
+              disabled={processing || loading}
             >
-              Refresh Matches
+              {loading ? 'Refreshing…' : 'Refresh Matches'}
             </button>
 
             {/* Waitlist Panel */}
@@ -890,7 +932,11 @@ export default function MatchApprovalPage() {
             <div style={styles.matchesHeader}>
               <div style={styles.matchCount}>
                 Found <strong>{matchResult.qualifiedMatches}</strong> matches
+                from {matchResult.totalCandidates} models
                 (avg score: {matchResult.averageScore})
+                {matchResult.excludedNoCard > 0 && (
+                  <> · {matchResult.excludedNoCard} hidden (no card on file)</>
+                )}
               </div>
               <select
                 style={styles.sortSelect}
@@ -921,7 +967,10 @@ export default function MatchApprovalPage() {
 
             {/* Match Cards */}
             {matchedModels.length === 0 ? (
-              <div style={styles.loading}>No matches found. Try adjusting criteria or check model availability.</div>
+              <div style={styles.loading}>
+                No matches found ({matchResult.totalCandidates} models in pool).
+                Try loosening criteria on the request, or add approved models with NYC ZIPs in Admin → Models.
+              </div>
             ) : (
               matchedModels.map((match) => {
                 // For mock data, find model by matching ID pattern

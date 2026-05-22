@@ -1,36 +1,34 @@
-import React, { useState } from 'react';
-import { 
-  ONBOARDING_STEPS, 
-  PROFESSIONAL_STATUS, 
-  TRAINING_CATEGORIES,
-  TOTAL_TRAINING_HOURS,
-  ACCESS_LEVELS 
-} from '../data/training';
-import { 
-  mockProfessionals, 
-  getOnboardingProgress, 
-  getTrainingProgress,
-  getProfessionalsNeedingAttention 
-} from '../data/mockProfessionals';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { generateClient } from 'aws-amplify/data';
+import { shouldUseMockData } from '../../utils/mockDataService';
+import { mockModels } from '../../matching';
+import { mockProfessionals } from '../data/mockProfessionals';
+import ModelDetailModal from '../components/ModelDetailModal';
+import ProfessionalDetailModal from '../components/ProfessionalDetailModal';
+import {
+  normalizeApprovalStatus,
+  needsAdminReview,
+  identityNeedsReview,
+} from '../utils/approvalStatus';
 
-// ============ STYLES ============
+let client;
+try {
+  if (!shouldUseMockData()) client = generateClient();
+} catch {
+  client = null;
+}
+
 const styles = {
   container: { padding: '2rem' },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '2rem',
-  },
+  header: { marginBottom: '2rem' },
   title: { fontSize: '1.75rem', fontWeight: '600' },
   subtitle: { color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', marginTop: '0.25rem' },
-  
-  // Stats row
   statsRow: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
+    gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '1rem',
-    marginBottom: '2rem',
+    marginBottom: '1.5rem',
   },
   statCard: {
     background: 'rgba(255,255,255,0.03)',
@@ -41,457 +39,354 @@ const styles = {
   },
   statValue: { fontSize: '2rem', fontWeight: '700' },
   statLabel: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.25rem' },
-  
-  // Tabs
-  tabs: {
-    display: 'flex',
-    gap: '0.5rem',
-    marginBottom: '1.5rem',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
-    paddingBottom: '0.5rem',
-  },
+  tabs: { display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
   tab: {
     padding: '0.6rem 1.25rem',
-    background: 'transparent',
-    border: 'none',
-    color: 'rgba(255,255,255,0.5)',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '10px',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: '0.9rem',
     cursor: 'pointer',
-    borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
   },
   tabActive: {
     background: 'rgba(233,69,96,0.2)',
+    borderColor: '#e94560',
     color: '#e94560',
   },
-  tabBadge: {
-    background: '#e94560',
-    color: '#fff',
-    padding: '0.15rem 0.5rem',
-    borderRadius: '10px',
-    fontSize: '0.7rem',
-    fontWeight: '600',
-  },
-  
-  // Pro cards
-  proGrid: {
+  list: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  row: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '1.5rem',
-  },
-  proCard: {
+    gridTemplateColumns: 'auto 1fr auto auto',
+    gap: '1rem',
+    alignItems: 'center',
     background: 'rgba(255,255,255,0.03)',
     border: '1px solid rgba(255,255,255,0.06)',
     borderRadius: '12px',
-    padding: '1.5rem',
+    padding: '1rem 1.25rem',
+    cursor: 'pointer',
+    transition: 'border-color 0.2s',
   },
-  proHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: '1rem',
-  },
-  proInfo: {
-    display: 'flex',
-    gap: '1rem',
-  },
-  proAvatar: {
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '1.25rem',
-    fontWeight: '600',
-  },
-  proName: { fontSize: '1.1rem', fontWeight: '600' },
-  proSalon: { fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' },
-  proEmail: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' },
-  
-  // Status badge
-  badge: {
-    padding: '0.3rem 0.75rem',
-    borderRadius: '20px',
+  typeBadge: {
+    padding: '0.25rem 0.6rem',
+    borderRadius: '6px',
     fontSize: '0.7rem',
     fontWeight: '600',
     textTransform: 'uppercase',
   },
-  
-  // Progress section
-  progressSection: {
-    marginTop: '1rem',
-    paddingTop: '1rem',
-    borderTop: '1px solid rgba(255,255,255,0.06)',
-  },
-  progressLabel: {
-    fontSize: '0.75rem',
-    color: 'rgba(255,255,255,0.4)',
-    marginBottom: '0.5rem',
-    display: 'flex',
-    justifyContent: 'space-between',
-  },
-  progressBar: {
-    height: '8px',
-    background: 'rgba(255,255,255,0.1)',
-    borderRadius: '4px',
-    overflow: 'hidden',
-    marginBottom: '1rem',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: '4px',
-    transition: 'width 0.3s ease',
-  },
-  
-  // Onboarding steps
-  stepsRow: {
-    display: 'flex',
-    gap: '0.5rem',
-    flexWrap: 'wrap',
-  },
-  stepBadge: {
-    padding: '0.3rem 0.6rem',
-    borderRadius: '6px',
+  name: { fontWeight: '600', fontSize: '1rem' },
+  meta: { fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginTop: '0.2rem' },
+  badge: {
+    padding: '0.25rem 0.65rem',
+    borderRadius: '12px',
     fontSize: '0.7rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.3rem',
+    fontWeight: '600',
   },
-  
-  // Training progress
-  trainingGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '0.75rem',
-    marginTop: '0.5rem',
-  },
-  trainingItem: {
-    background: 'rgba(255,255,255,0.03)',
+  actions: { display: 'flex', gap: '0.5rem', flexWrap: 'wrap' },
+  btn: {
+    padding: '0.4rem 0.85rem',
     borderRadius: '8px',
-    padding: '0.75rem',
-    textAlign: 'center',
-  },
-  trainingHours: {
-    fontSize: '1.1rem',
-    fontWeight: '700',
-  },
-  trainingLabel: {
-    fontSize: '0.65rem',
-    color: 'rgba(255,255,255,0.4)',
-    marginTop: '0.25rem',
-  },
-  
-  // Actions
-  actionBtn: {
-    padding: '0.5rem 1rem',
-    background: 'transparent',
     border: '1px solid rgba(255,255,255,0.2)',
-    borderRadius: '8px',
+    background: 'transparent',
     color: '#fff',
     fontSize: '0.8rem',
     cursor: 'pointer',
-    marginRight: '0.5rem',
   },
-  actionBtnPrimary: {
-    background: 'linear-gradient(135deg, #e94560, #ff6b8a)',
+  btnPrimary: {
+    background: 'linear-gradient(135deg, #4caf50, #2e7d32)',
     border: 'none',
   },
-  
-  // Alerts section
-  alertsSection: {
-    background: 'rgba(255,193,7,0.1)',
-    border: '1px solid rgba(255,193,7,0.3)',
-    borderRadius: '12px',
-    padding: '1rem 1.5rem',
-    marginBottom: '1.5rem',
-  },
-  alertTitle: {
-    fontSize: '0.9rem',
-    fontWeight: '600',
+  btnWarn: {
+    background: 'rgba(255,193,7,0.15)',
+    borderColor: 'rgba(255,193,7,0.4)',
     color: '#ffc107',
-    marginBottom: '0.75rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
   },
-  alertItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '0.5rem 0',
-    borderBottom: '1px solid rgba(255,193,7,0.1)',
+  empty: {
+    textAlign: 'center',
+    padding: '3rem',
+    color: 'rgba(255,255,255,0.4)',
+    background: 'rgba(255,255,255,0.02)',
+    borderRadius: '12px',
   },
+  links: { marginTop: '1rem', fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' },
 };
 
-const getStatusBadge = (status) => {
-  const configs = {
-    [PROFESSIONAL_STATUS.ACTIVE]: { bg: 'rgba(76,175,80,0.2)', color: '#4caf50', label: 'Active' },
-    [PROFESSIONAL_STATUS.IN_TRAINING]: { bg: 'rgba(33,150,243,0.2)', color: '#2196f3', label: 'In Training' },
-    [PROFESSIONAL_STATUS.IN_ONBOARDING]: { bg: 'rgba(255,193,7,0.2)', color: '#ffc107', label: 'Onboarding' },
-    [PROFESSIONAL_STATUS.PENDING_VERIFICATION]: { bg: 'rgba(255,152,0,0.2)', color: '#ff9800', label: 'Pending Verification' },
-    [PROFESSIONAL_STATUS.SUSPENDED]: { bg: 'rgba(244,67,54,0.2)', color: '#f44336', label: 'Suspended' },
-    [PROFESSIONAL_STATUS.INACTIVE]: { bg: 'rgba(158,158,158,0.2)', color: '#9e9e9e', label: 'Inactive' },
+function statusBadgeStyle(status) {
+  const n = normalizeApprovalStatus(status);
+  if (n === 'approved') return { background: 'rgba(76,175,80,0.2)', color: '#4caf50' };
+  if (n === 'manual_review') return { background: 'rgba(255,193,7,0.2)', color: '#ffc107' };
+  if (n === 'needs_changes') return { background: 'rgba(255,152,0,0.2)', color: '#ff9800' };
+  if (n === 'rejected') return { background: 'rgba(244,67,54,0.2)', color: '#f44336' };
+  return { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' };
+}
+
+function mapModelRow(profile) {
+  return {
+    type: 'model',
+    id: profile.id,
+    record: profile,
+    name: `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || 'Unknown',
+    email: profile.email || '',
+    status: profile.status,
+    identityStatus: profile.identityVerificationStatus,
+    phone: profile.phone,
   };
-  return configs[status] || configs[PROFESSIONAL_STATUS.INACTIVE];
-};
+}
+
+function mapProfessionalRow(pro) {
+  return {
+    type: 'professional',
+    id: pro.id,
+    record: pro,
+    name: `${pro.firstName || ''} ${pro.lastName || ''}`.trim() || 'Unknown',
+    email: pro.email || '',
+    status: pro.status,
+    identityStatus: pro.identityVerificationStatus,
+    phone: pro.phone,
+    salon: pro.salonName,
+  };
+}
 
 export default function OnboardingPage() {
-  const [activeTab, setActiveTab] = useState('all');
-  
-  const needsAttention = getProfessionalsNeedingAttention();
-  
-  const stats = {
-    total: mockProfessionals.length,
-    active: mockProfessionals.filter(p => p.status === PROFESSIONAL_STATUS.ACTIVE).length,
-    inTraining: mockProfessionals.filter(p => p.status === PROFESSIONAL_STATUS.IN_TRAINING).length,
-    inOnboarding: mockProfessionals.filter(p => p.status === PROFESSIONAL_STATUS.IN_ONBOARDING).length,
-    pending: mockProfessionals.filter(p => p.status === PROFESSIONAL_STATUS.PENDING_VERIFICATION).length,
+  const [activeTab, setActiveTab] = useState('queue');
+  const [models, setModels] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [selectedProfessional, setSelectedProfessional] = useState(null);
+
+  const loadQueue = useCallback(async () => {
+    setLoading(true);
+    if (shouldUseMockData() || !client?.models) {
+      const mockModelRows = (mockModels || []).slice(0, 6).map((m) =>
+        mapModelRow({
+          id: String(m.id),
+          firstName: m.firstName,
+          lastName: m.lastName,
+          email: m.email || 'model@mock.local',
+          status: m.status || 'pending',
+          identityVerificationStatus: m.identityVerificationStatus || 'manual_review',
+          phone: m.phone,
+        })
+      );
+      const mockProRows = mockProfessionals.slice(0, 6).map((p, i) =>
+        mapProfessionalRow({
+          id: p.id || `mock-pro-${i}`,
+          firstName: p.firstName || p.name?.split(' ')[0],
+          lastName: p.lastName || p.name?.split(' ').slice(1).join(' '),
+          email: p.email || `pro${i}@mock.local`,
+          status: p.status === 'active' ? 'approved' : 'pending',
+          identityVerificationStatus: 'manual_review',
+          salonName: p.salon,
+        })
+      );
+      setModels(mockModelRows.filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus)));
+      setProfessionals(mockProRows.filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus)));
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [modelRes, proRes] = await Promise.all([
+        client.models.ModelProfile.list({ limit: 200 }),
+        client.models.Professional.list({ limit: 200 }),
+      ]);
+      const modelRows = (modelRes.data || [])
+        .map(mapModelRow)
+        .filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus));
+      const proRows = (proRes.data || [])
+        .map(mapProfessionalRow)
+        .filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus));
+      setModels(modelRows);
+      setProfessionals(proRows);
+    } catch (err) {
+      console.error('Review queue load failed:', err);
+      setModels([]);
+      setProfessionals([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadQueue();
+  }, [loadQueue]);
+
+  const updateStatus = async (row, nextStatus, e) => {
+    e?.stopPropagation?.();
+    if (shouldUseMockData() || !client?.models) return;
+    try {
+      if (row.type === 'model' && client.models.ModelProfile) {
+        await client.models.ModelProfile.update({ id: row.id, status: nextStatus });
+      } else if (row.type === 'professional' && client.models.Professional) {
+        await client.models.Professional.update({ id: row.id, status: nextStatus });
+      }
+      await loadQueue();
+    } catch (err) {
+      console.error('Status update failed:', err);
+      alert(`Could not update status: ${err.message}`);
+    }
   };
-  
-  const filteredPros = activeTab === 'all' 
-    ? mockProfessionals 
-    : activeTab === 'attention'
-    ? needsAttention
-    : mockProfessionals.filter(p => p.status === activeTab);
+
+  const queue =
+    activeTab === 'models'
+      ? models
+      : activeTab === 'professionals'
+        ? professionals
+        : [...models, ...professionals].sort((a, b) => a.name.localeCompare(b.name));
+
+  const stats = {
+    modelsPending: models.length,
+    prosPending: professionals.length,
+    identityReview: [...models, ...professionals].filter((r) => identityNeedsReview(r.identityStatus)).length,
+    total: models.length + professionals.length,
+  };
+
+  const openRow = (row) => {
+    if (row.type === 'model') {
+      setSelectedProfessional(null);
+      setSelectedModel(row.record);
+    } else {
+      setSelectedModel(null);
+      setSelectedProfessional(row.record);
+    }
+  };
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
-        <div>
-          <h1 style={styles.title}>Professional Onboarding & Training 📚</h1>
-          <p style={styles.subtitle}>Track onboarding progress and training certification</p>
-        </div>
+        <h1 style={styles.title}>Review Queue</h1>
+        <p style={styles.subtitle}>
+          Approve new models and professionals after onboarding. Identity verification can be completed here while SES is pending.
+        </p>
       </div>
 
-      {/* Stats Row */}
       <div style={styles.statsRow}>
         <div style={styles.statCard}>
-          <div style={{ ...styles.statValue, color: '#667eea' }}>{stats.total}</div>
-          <div style={styles.statLabel}>Total Professionals</div>
+          <div style={{ ...styles.statValue, color: '#e94560' }}>{stats.total}</div>
+          <div style={styles.statLabel}>Needs review</div>
         </div>
         <div style={styles.statCard}>
-          <div style={{ ...styles.statValue, color: '#4caf50' }}>{stats.active}</div>
-          <div style={styles.statLabel}>Active</div>
+          <div style={{ ...styles.statValue, color: '#667eea' }}>{stats.modelsPending}</div>
+          <div style={styles.statLabel}>Models</div>
         </div>
         <div style={styles.statCard}>
-          <div style={{ ...styles.statValue, color: '#2196f3' }}>{stats.inTraining}</div>
-          <div style={styles.statLabel}>In Training</div>
+          <div style={{ ...styles.statValue, color: '#4caf50' }}>{stats.prosPending}</div>
+          <div style={styles.statLabel}>Professionals</div>
         </div>
         <div style={styles.statCard}>
-          <div style={{ ...styles.statValue, color: '#ffc107' }}>{stats.inOnboarding}</div>
-          <div style={styles.statLabel}>Onboarding</div>
-        </div>
-        <div style={styles.statCard}>
-          <div style={{ ...styles.statValue, color: '#ff9800' }}>{stats.pending}</div>
-          <div style={styles.statLabel}>Pending Verification</div>
+          <div style={{ ...styles.statValue, color: '#ffc107' }}>{stats.identityReview}</div>
+          <div style={styles.statLabel}>ID / selfie review</div>
         </div>
       </div>
 
-      {/* Needs Attention Alert */}
-      {needsAttention.length > 0 && (
-        <div style={styles.alertsSection}>
-          <div style={styles.alertTitle}>
-            <span>⚠️</span> Needs Your Attention ({needsAttention.length})
-          </div>
-          {needsAttention.slice(0, 3).map(pro => (
-            <div key={pro.id} style={styles.alertItem}>
+      <div style={styles.tabs}>
+        {[
+          { id: 'queue', label: `All (${stats.total})` },
+          { id: 'models', label: `Models (${stats.modelsPending})` },
+          { id: 'professionals', label: `Professionals (${stats.prosPending})` },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            style={{ ...styles.tab, ...(activeTab === tab.id ? styles.tabActive : {}) }}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div style={styles.empty}>Loading review queue…</div>
+      ) : queue.length === 0 ? (
+        <div style={styles.empty}>
+          <p>No profiles waiting for review.</p>
+          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+            New signups appear here when status is pending or identity needs manual review.
+          </p>
+        </div>
+      ) : (
+        <div style={styles.list}>
+          {queue.map((row) => (
+            <div
+              key={`${row.type}-${row.id}`}
+              style={styles.row}
+              onClick={() => openRow(row)}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = 'rgba(233,69,96,0.4)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
+            >
+              <span
+                style={{
+                  ...styles.typeBadge,
+                  background: row.type === 'model' ? 'rgba(233,69,96,0.2)' : 'rgba(102,126,234,0.2)',
+                  color: row.type === 'model' ? '#e94560' : '#667eea',
+                }}
+              >
+                {row.type}
+              </span>
               <div>
-                <strong>{pro.firstName} {pro.lastName}</strong>
-                <span style={{ color: 'rgba(255,255,255,0.5)', marginLeft: '0.5rem' }}>
-                  {!pro.licenseVerified && '• License pending '}
-                  {!pro.backgroundCheckCleared && '• Background check pending '}
-                  {!pro.onboardingComplete && '• Onboarding incomplete'}
-                </span>
+                <div style={styles.name}>{row.name}</div>
+                <div style={styles.meta}>
+                  {row.email}
+                  {row.salon ? ` · ${row.salon}` : ''}
+                  {row.phone ? ` · ${row.phone}` : ''}
+                </div>
               </div>
-              <button style={styles.actionBtn}>Review →</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-end' }}>
+                <span style={{ ...styles.badge, ...statusBadgeStyle(row.status) }}>
+                  {normalizeApprovalStatus(row.status).replace('_', ' ')}
+                </span>
+                {identityNeedsReview(row.identityStatus) && (
+                  <span style={{ ...styles.badge, background: 'rgba(255,193,7,0.15)', color: '#ffc107' }}>
+                    ID: {row.identityStatus || 'pending'}
+                  </span>
+                )}
+              </div>
+              <div style={styles.actions} onClick={(e) => e.stopPropagation()}>
+                <button type="button" style={{ ...styles.btn, ...styles.btnPrimary }} onClick={(e) => updateStatus(row, 'active', e)}>
+                  Approve
+                </button>
+                <button type="button" style={{ ...styles.btn, ...styles.btnWarn }} onClick={(e) => updateStatus(row, 'manual_review', e)}>
+                  Manual review
+                </button>
+                <button type="button" style={styles.btn} onClick={() => openRow(row)}>
+                  Open
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={styles.tabs}>
-        <button
-          style={{ ...styles.tab, ...(activeTab === 'all' ? styles.tabActive : {}) }}
-          onClick={() => setActiveTab('all')}
-        >
-          All Professionals
-        </button>
-        <button
-          style={{ ...styles.tab, ...(activeTab === 'attention' ? styles.tabActive : {}) }}
-          onClick={() => setActiveTab('attention')}
-        >
-          Needs Attention
-          {needsAttention.length > 0 && (
-            <span style={styles.tabBadge}>{needsAttention.length}</span>
-          )}
-        </button>
-        <button
-          style={{ ...styles.tab, ...(activeTab === PROFESSIONAL_STATUS.IN_TRAINING ? styles.tabActive : {}) }}
-          onClick={() => setActiveTab(PROFESSIONAL_STATUS.IN_TRAINING)}
-        >
-          In Training
-        </button>
-        <button
-          style={{ ...styles.tab, ...(activeTab === PROFESSIONAL_STATUS.ACTIVE ? styles.tabActive : {}) }}
-          onClick={() => setActiveTab(PROFESSIONAL_STATUS.ACTIVE)}
-        >
-          Active
-        </button>
-      </div>
+      <p style={styles.links}>
+        Full galleries: <Link to="/admin/models" style={{ color: '#e94560' }}>Models</Link>
+        {' · '}
+        <Link to="/admin/professionals" style={{ color: '#667eea' }}>Professionals</Link>
+        {' · '}
+        <Link to="/admin/training" style={{ color: 'rgba(255,255,255,0.6)' }}>Training program</Link>
+      </p>
 
-      {/* Professional Cards */}
-      <div style={styles.proGrid}>
-        {filteredPros.map(pro => {
-          const statusConfig = getStatusBadge(pro.status);
-          const onboardingPct = getOnboardingProgress(pro);
-          const trainingPct = getTrainingProgress(pro);
-          
-          return (
-            <div key={pro.id} style={styles.proCard}>
-              {/* Header */}
-              <div style={styles.proHeader}>
-                <div style={styles.proInfo}>
-                  <div style={styles.proAvatar}>{pro.firstName.charAt(0)}</div>
-                  <div>
-                    <div style={styles.proName}>{pro.firstName} {pro.lastName}</div>
-                    <div style={styles.proSalon}>{pro.salon} • {ACCESS_LEVELS[pro.role]?.name}</div>
-                    <div style={styles.proEmail}>{pro.email}</div>
-                  </div>
-                </div>
-                <span style={{
-                  ...styles.badge,
-                  background: statusConfig.bg,
-                  color: statusConfig.color,
-                }}>
-                  {statusConfig.label}
-                </span>
-              </div>
-
-              {/* Verification Status */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                <span style={{
-                  ...styles.stepBadge,
-                  background: pro.idVerified ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: pro.idVerified ? '#4caf50' : 'rgba(255,255,255,0.4)',
-                }}>
-                  {pro.idVerified ? '✓' : '○'} ID
-                </span>
-                <span style={{
-                  ...styles.stepBadge,
-                  background: pro.licenseVerified ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: pro.licenseVerified ? '#4caf50' : 'rgba(255,255,255,0.4)',
-                }}>
-                  {pro.licenseVerified ? '✓' : '○'} License
-                </span>
-                <span style={{
-                  ...styles.stepBadge,
-                  background: pro.backgroundCheckCleared ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: pro.backgroundCheckCleared ? '#4caf50' : 'rgba(255,255,255,0.4)',
-                }}>
-                  {pro.backgroundCheckCleared ? '✓' : '○'} Background
-                </span>
-                <span style={{
-                  ...styles.stepBadge,
-                  background: pro.documentsComplete ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: pro.documentsComplete ? '#4caf50' : 'rgba(255,255,255,0.4)',
-                }}>
-                  {pro.documentsComplete ? '✓' : '○'} Docs
-                </span>
-              </div>
-
-              {/* Onboarding Progress */}
-              <div style={styles.progressSection}>
-                <div style={styles.progressLabel}>
-                  <span>Onboarding Progress</span>
-                  <span>{onboardingPct}%</span>
-                </div>
-                <div style={styles.progressBar}>
-                  <div style={{
-                    ...styles.progressFill,
-                    width: `${onboardingPct}%`,
-                    background: onboardingPct === 100 ? '#4caf50' : 'linear-gradient(90deg, #667eea, #764ba2)',
-                  }} />
-                </div>
-
-                {/* Onboarding Steps */}
-                <div style={styles.stepsRow}>
-                  {ONBOARDING_STEPS.map(step => {
-                    const stepProgress = pro.onboardingProgress[step.id];
-                    return (
-                      <span
-                        key={step.id}
-                        style={{
-                          ...styles.stepBadge,
-                          background: stepProgress?.completed ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)',
-                          color: stepProgress?.completed ? '#4caf50' : 'rgba(255,255,255,0.4)',
-                        }}
-                        title={`${step.name}: ${stepProgress?.tasksComplete || 0}/${stepProgress?.totalTasks || 0}`}
-                      >
-                        {step.icon} {stepProgress?.completed ? '✓' : `${stepProgress?.tasksComplete || 0}/${stepProgress?.totalTasks || 0}`}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Training Progress */}
-              <div style={styles.progressSection}>
-                <div style={styles.progressLabel}>
-                  <span>Training Progress ({pro.totalTrainingHours}/{TOTAL_TRAINING_HOURS} hrs)</span>
-                  <span>{trainingPct}%</span>
-                </div>
-                <div style={styles.progressBar}>
-                  <div style={{
-                    ...styles.progressFill,
-                    width: `${trainingPct}%`,
-                    background: trainingPct === 100 ? '#4caf50' : 'linear-gradient(90deg, #e94560, #ff6b8a)',
-                  }} />
-                </div>
-
-                {/* Training by Category */}
-                <div style={styles.trainingGrid}>
-                  {Object.entries(TRAINING_CATEGORIES).map(([key, cat]) => {
-                    const progress = pro.trainingProgress[key];
-                    return (
-                      <div key={key} style={styles.trainingItem}>
-                        <div style={{ fontSize: '1.25rem' }}>{cat.icon}</div>
-                        <div style={{
-                          ...styles.trainingHours,
-                          color: progress?.certified ? '#4caf50' : cat.color,
-                        }}>
-                          {progress?.hoursCompleted || 0}/{cat.totalHours}
-                        </div>
-                        <div style={styles.trainingLabel}>
-                          {cat.name}
-                          {progress?.certified && ' ✓'}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
-                <button style={styles.actionBtn}>View Profile</button>
-                <button style={styles.actionBtn}>Training Log</button>
-                {!pro.onboardingComplete && (
-                  <button style={{ ...styles.actionBtn, ...styles.actionBtnPrimary }}>
-                    Resume Onboarding
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {selectedModel && (
+        <ModelDetailModal
+          model={selectedModel}
+          onClose={() => setSelectedModel(null)}
+          onUpdate={() => {
+            setSelectedModel(null);
+            loadQueue();
+          }}
+        />
+      )}
+      {selectedProfessional && (
+        <ProfessionalDetailModal
+          professional={selectedProfessional}
+          onClose={() => setSelectedProfessional(null)}
+          onUpdate={() => {
+            setSelectedProfessional(null);
+            loadQueue();
+          }}
+        />
+      )}
     </div>
   );
 }
-

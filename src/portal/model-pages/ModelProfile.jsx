@@ -969,13 +969,15 @@ export default function ModelProfile() {
         return;
       }
 
-      if (!user || !user.userId) {
+      const authUserId =
+        user?.userId || user?.username || user?.userSub;
+      if (!authUserId) {
         setLoading(false);
         return;
       }
 
       const { data: profiles } = await client.models.ModelProfile.list({
-        filter: { userId: { eq: user.userId } },
+        filter: { userId: { eq: authUserId } },
       });
       
       if (profiles && profiles.length > 0) {

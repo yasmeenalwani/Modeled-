@@ -1,7 +1,25 @@
 import React, { useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
+import PartnerLocationsPanel from './PartnerLocationsPanel';
+import PartnerServicesPanel from './PartnerServicesPanel';
+import PartnerTeamPanel from './PartnerTeamPanel';
+import {
+  partnerCreatePayloadForDeployedApi,
+  formatLocationCountLabel,
+} from '../../utils/partnerProfile';
 
 const client = generateClient();
+
+const draftBannerStyle = {
+  margin: '0 2rem 1rem',
+  padding: '1rem 1.25rem',
+  borderRadius: '10px',
+  background: 'rgba(102,126,234,0.15)',
+  border: '1px solid rgba(102,126,234,0.35)',
+  fontSize: '0.88rem',
+  lineHeight: 1.5,
+  color: 'rgba(255,255,255,0.85)',
+};
 
 // Reuse styles (in production, extract to shared file)
 const styles = {
@@ -197,6 +215,10 @@ const styles = {
     background: 'rgba(139,30,63,0.2)',
     color: '#8B1E3F',
   },
+  statusInactive: {
+    background: 'rgba(255,255,255,0.1)',
+    color: 'rgba(255,255,255,0.6)',
+  },
   fileUpload: {
     border: '2px dashed rgba(255,255,255,0.2)',
     borderRadius: '10px',
@@ -235,26 +257,46 @@ export default function PartnerDetailModal({ partner, onClose, onUpdate }) {
   const [status, setStatus] = useState(partner?.status || 'pending');
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [saving, setSaving] = useState(false);
-  
+
+  const isDraft = partner?.isDraft || String(partner?.id || '').startsWith('draft:');
+  const locationLabel = formatLocationCountLabel(partner?.locationSites);
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      if (partner?.id) {
+      if (partner?.id && !isDraft) {
         await client.models.Partner.update({
           id: partner.id,
           adminNotes: notes,
-          status: status,
+          status,
         });
-        
-        if (onUpdate) {
-          onUpdate();
-        }
-        
+        if (onUpdate) onUpdate();
         alert('✅ Changes saved successfully!');
+      } else if (isDraft) {
+        alert('Use “Publish to database” to save this imported draft as a Partner record.');
       }
     } catch (error) {
       console.error('Error saving:', error);
       alert(`❌ Error: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePublishDraft = async () => {
+    if (!isDraft || !partner?.slug) return;
+    setSaving(true);
+    try {
+      const payload = partnerCreatePayloadForDeployedApi(partner);
+      await client.models.Partner.create(payload);
+      alert('✅ Roman K Salon published to the database. Refresh the list to see it as a live partner.');
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Publish draft failed:', error);
+      alert(
+        `Could not publish: ${error.message}\n\nIf new fields (locationSites, slug) are missing, deploy the Amplify backend first.`
+      );
     } finally {
       setSaving(false);
     }
@@ -285,6 +327,12 @@ export default function PartnerDetailModal({ partner, onClose, onUpdate }) {
             <div style={styles.headerInfo}>
               <div style={styles.name}>{partner.businessName}</div>
               <div style={styles.email}>{partner.email}</div>
+              {partner.phone && (
+                <div style={{ ...styles.email, marginTop: '0.2rem' }}>{partner.phone}</div>
+              )}
+              {locationLabel && (
+                <div style={{ ...styles.email, marginTop: '0.15rem', opacity: 0.75 }}>{locationLabel}</div>
+              )}
               <div style={{ marginTop: '0.5rem' }}>
                 <span style={{
                   ...styles.statusBadge,
@@ -300,10 +348,37 @@ export default function PartnerDetailModal({ partner, onClose, onUpdate }) {
           </div>
           <button style={styles.closeBtn} onClick={onClose}>✕ Close</button>
         </div>
+
+        {isDraft && (
+          <div style={draftBannerStyle}>
+            <strong>Website import draft</strong> — parsed from{' '}
+            {partner.sourceUrl ? (
+              <a href={partner.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#9aaeff' }}>
+                {partner.sourceUrl}
+              </a>
+            ) : (
+              'partner website'
+            )}
+            . Review locations, contact email, and services, then publish when ready.
+            <div style={{ marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                style={{ ...styles.btn, ...styles.btnPrimary }}
+                onClick={handlePublishDraft}
+                disabled={saving}
+              >
+                {saving ? 'Publishing…' : 'Publish to database'}
+              </button>
+            </div>
+          </div>
+        )}
         
         <div style={styles.tabs}>
           {[
             { id: 'overview', label: '📋 Overview' },
+            { id: 'locations', label: '📍 Locations' },
+            { id: 'services', label: '✂️ Services' },
+            { id: 'team', label: '👥 Team' },
             { id: 'notes', label: '📝 Notes & Details' },
             { id: 'files', label: '📎 Files & Documents' },
             { id: 'activity', label: '📊 Activity History' },
@@ -324,6 +399,14 @@ export default function PartnerDetailModal({ partner, onClose, onUpdate }) {
         <div style={styles.content}>
           {activeTab === 'overview' && (
             <div>
+              {partner.brandSummary && (
+                <div style={styles.section}>
+                  <div style={styles.sectionTitle}>About</div>
+                  <div style={styles.infoCard}>
+                    <div style={styles.infoValue}>{partner.brandSummary}</div>
+                  </div>
+                </div>
+              )}
               <div style={styles.twoColumn}>
                 <div style={styles.section}>
                   <div style={styles.sectionTitle}>📞 Contact Information</div>
@@ -351,6 +434,18 @@ export default function PartnerDetailModal({ partner, onClose, onUpdate }) {
                     <div style={styles.infoLabel}>Business Type</div>
                     <div style={styles.infoValue}>{partner.businessType || 'Not specified'}</div>
                   </div>
+                  {partner.slug && (
+                    <div style={styles.infoCard}>
+                      <div style={styles.infoLabel}>Slug</div>
+                      <div style={styles.infoValue}>{partner.slug}</div>
+                    </div>
+                  )}
+                  {Array.isArray(partner.tags) && partner.tags.length > 0 && (
+                    <div style={styles.infoCard}>
+                      <div style={styles.infoLabel}>Tags</div>
+                      <div style={styles.infoValue}>{partner.tags.join(', ')}</div>
+                    </div>
+                  )}
                   <div style={styles.infoCard}>
                     <div style={styles.infoLabel}>Address</div>
                     <div style={styles.infoValue}>
@@ -411,6 +506,34 @@ export default function PartnerDetailModal({ partner, onClose, onUpdate }) {
                   </select>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'locations' && (
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>📍 Locations ({locationLabel})</div>
+              <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                Pros can be assigned to a partner with an optional branch suffix (e.g. TriBeCa vs Madison).
+                Matching uses ZIP and neighborhood from each site.
+              </p>
+              <PartnerLocationsPanel locationSites={partner.locationSites} />
+            </div>
+          )}
+
+          {activeTab === 'services' && (
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>✂️ Service menu & pricing</div>
+              <PartnerServicesPanel
+                servicesList={partner.servicesList}
+                pricingNote={partner.pricingNote}
+              />
+            </div>
+          )}
+
+          {activeTab === 'team' && (
+            <div style={styles.section}>
+              <div style={styles.sectionTitle}>👥 Team roster</div>
+              <PartnerTeamPanel partner={partner} />
             </div>
           )}
           

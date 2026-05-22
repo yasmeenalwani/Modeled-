@@ -25,14 +25,7 @@ For **sign-up and attribute verification**, Cognito sends **to** the user’s em
 
 In this project, auth is already configured to use a custom sender in `amplify/auth/resource.ts`:
 
-```ts
-senders: {
-  email: {
-    fromEmail: process.env.AMPLIFY_SES_FROM_EMAIL || 'noreply@modeled.app',
-    fromName: 'Modeled',
-  },
-},
-```
+Auth uses a custom SES sender only when `AMPLIFY_SES_FROM_EMAIL` is set at deploy time (see `amplify/auth/resource.ts`). Otherwise Cognito uses its default email until you verify an identity and set that env var.
 
 - **Option A:** Set **`AMPLIFY_SES_FROM_EMAIL`** to your SES-verified email (e.g. in your CI/env or `.env` used at deploy), then redeploy (e.g. `npx ampx sandbox` or your pipeline).
 - **Option B:** Change **`noreply@modeled.app`** in `amplify/auth/resource.ts` to your SES-verified email, then redeploy.
@@ -80,3 +73,8 @@ Amplify/Gen 2 typically grants Cognito permission to publish to SNS when the use
 | **SMS** | (Production) Request origination number and/or SNS production access if needed. |
 
 After SES is connected and the auth sender is updated and redeployed, **email** verification in the app should work. After the SMS side (sandbox or production) is set up, **text** verification should work for the allowed destinations.
+
+### Local onboarding
+
+- By default, **localhost runs real Cognito verification** (SES/SNS) unless `VITE_BYPASS_ONBOARDING_VERIFICATION=true` or `VITE_USE_MOCK_DATA=true`.
+- Transactional emails (bookings, etc.) use the `notifications` Lambda; redeploy after backend changes so SES IAM permissions apply.

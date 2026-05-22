@@ -58,6 +58,14 @@ export async function ensureEmailVerificationCodeSent(formEmail) {
     await updateUserAttribute({
       userAttribute: { attributeKey: 'email', value: target },
     });
+    try {
+      await sendUserAttributeVerificationCode({ userAttributeKey: 'email' });
+    } catch (err) {
+      if (/already.*verified/i.test(err?.message || '')) {
+        return { status: 'already_verified', email: target };
+      }
+      throw err;
+    }
     return { status: 'code_sent', email: target, method: 'update' };
   }
 

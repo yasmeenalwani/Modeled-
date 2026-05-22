@@ -4,6 +4,7 @@ import { services, formatPrice } from '../data/services';
 import { getPendingRequestsCount, getRequestsForMatching } from '../../utils/matchingApi';
 import { generateClient } from 'aws-amplify/data';
 import { getWorkflowStage, getStatusLabel, getStatusColor } from '../../utils/workflowState';
+import { needsAdminReview, identityNeedsReview } from '../utils/approvalStatus';
 
 const client = generateClient();
 
@@ -28,7 +29,7 @@ const styles = {
   // Stats grid
   statsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
+    gridTemplateColumns: 'repeat(5, 1fr)',
     gap: '1.5rem',
     marginBottom: '2rem',
   },
@@ -158,7 +159,7 @@ const styles = {
   // Quick actions
   quickActions: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
+    gridTemplateColumns: 'repeat(4, 1fr)',
     gap: '1rem',
     marginBottom: '2rem',
   },
@@ -204,11 +205,12 @@ const styles = {
 };
 
 // Helper to calculate stats from real data
-const calculateStats = (modelsCount, professionalsCount, pendingCount, bookingsCount) => [
+const calculateStats = (modelsCount, professionalsCount, pendingCount, bookingsCount, reviewCount) => [
+  { icon: '', value: String(reviewCount), label: 'Pending Reviews', change: 'Onboarding queue', changeType: reviewCount > 0 ? 'urgent' : 'neutral', link: '/admin/onboarding' },
   { icon: '', value: String(modelsCount), label: 'Active Models', change: 'Active now', changeType: 'positive' },
   { icon: '', value: String(professionalsCount), label: 'Professionals', change: 'On platform', changeType: 'positive' },
-  { icon: '', value: String(pendingCount), label: 'Matching Requests', change: 'Need matching', changeType: 'urgent' },
-  { icon: '', value: String(bookingsCount), label: 'Upcoming Bookings', change: 'Next 7 days', changeType: 'neutral' },
+  { icon: '', value: String(pendingCount), label: 'Matching Requests', change: 'Need matching', changeType: 'urgent', link: '/admin/requests' },
+  { icon: '', value: String(bookingsCount), label: 'Upcoming Bookings', change: 'Next 7 days', changeType: 'neutral', link: '/admin/bookings' },
 ];
 
 export default function Dashboard() {
@@ -218,6 +220,7 @@ export default function Dashboard() {
     professionals: 0,
     pendingRequests: 0,
     upcomingBookings: 0,
+    pendingReviews: 0,
   });
   const [pendingRequests, setPendingRequests] = useState([]);
   const [topPerformers, setTopPerformers] = useState([]);
@@ -236,6 +239,8 @@ export default function Dashboard() {
       const [
         modelsResult,
         professionalsResult,
+        allModelsResult,
+        allProsResult,
         requestsResult,
         bookingsResult,
         allRequestsResult,
@@ -246,6 +251,8 @@ export default function Dashboard() {
         client.models.Professional.list({
           filter: { status: { eq: 'active' } },
         }),
+        client.models.ModelProfile.list({ limit: 500 }),
+        client.models.Professional.list({ limit: 500 }),
         client.models.ModelRequest.list({
           filter: { status: { eq: 'matching' } },
           limit: 10,
@@ -271,12 +278,20 @@ export default function Dashboard() {
       const professionalsCount = professionalsResult.data?.length || 0;
       const pendingCount = requestsResult.data?.length || 0;
       const bookingsCount = bookingsResult.data?.length || 0;
+      const reviewCount =
+        (allModelsResult.data || []).filter(
+          (m) => needsAdminReview(m.status) || identityNeedsReview(m.identityVerificationStatus)
+        ).length +
+        (allProsResult.data || []).filter(
+          (p) => needsAdminReview(p.status) || identityNeedsReview(p.identityVerificationStatus)
+        ).length;
 
       setStats({
         models: modelsCount,
         professionals: professionalsCount,
         pendingRequests: pendingCount,
         upcomingBookings: bookingsCount,
+        pendingReviews: reviewCount,
       });
 
       // Load matching requests with professional details
@@ -415,6 +430,10 @@ export default function Dashboard() {
     navigate('/admin/match-approval');
   };
 
+  const handleReviewQueue = () => {
+    navigate('/admin/onboarding');
+  };
+
   const handleViewAllRequests = () => {
     navigate('/admin/requests');
   };
@@ -452,7 +471,17 @@ export default function Dashboard() {
           onClick={handleApprovePending}
           disabled={loading}
         >
-          Approve Pending
+          Approve Matches
+        </button>
+        <button 
+          style={{
+            ...styles.actionBtn,
+            ...(stats.pendingReviews > 0 ? { borderColor: '#ffc107', background: 'rgba(255,193,7,0.15)' } : {}),
+          }}
+          onClick={handleReviewQueue}
+          disabled={loading}
+        >
+          Review Queue{stats.pendingReviews > 0 ? ` (${stats.pendingReviews})` : ''}
         </button>
       </div>
 
@@ -460,7 +489,7 @@ export default function Dashboard() {
       <div style={styles.statsGrid}>
         {loading ? (
           // Loading skeletons
-          Array(4)
+          Array(5)
             .fill(0)
             .map((_, i) => (
               <div key={i} style={styles.statCard}>
@@ -498,9 +527,18 @@ export default function Dashboard() {
             stats.models,
             stats.professionals,
             stats.pendingRequests,
-            stats.upcomingBookings
+            stats.upcomingBookings,
+            stats.pendingReviews
           ).map((stat, index) => (
-          <div key={index} style={styles.statCard}>
+          <div
+            key={index}
+            style={{
+              ...styles.statCard,
+              ...(stat.link ? { cursor: 'pointer' } : {}),
+            }}
+            onClick={stat.link ? () => navigate(stat.link) : undefined}
+            role={stat.link ? 'button' : undefined}
+          >
             <div style={styles.statIcon}>{stat.icon}</div>
             <div style={styles.statValue}>{stat.value}</div>
             <div style={styles.statLabel}>{stat.label}</div>

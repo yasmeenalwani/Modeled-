@@ -13,6 +13,9 @@ export const PARTNER_TAG_CATEGORIES = [
       { id: 'studio', label: 'Studio' },
       { id: 'school', label: 'School' },
       { id: 'spa', label: 'Spa' },
+      { id: 'med_spa', label: 'Med Spa' },
+      { id: 'barbershop', label: 'Barbershop' },
+      { id: 'other', label: 'Other' },
     ],
   },
   {
@@ -93,12 +96,21 @@ export const partnerToTags = (partner) => {
     else tags.push('size:stylists:small');
   }
   
-  // Size by locations (assuming single location if not specified, or check locationCount)
-  const locationCount = partner.locationCount || (partner.locations ? partner.locations.length : 1);
-  if (locationCount > 1) {
+  // Size by locations
+  const siteCount =
+    partner.locationCount ??
+    (Array.isArray(partner.locationSites) ? partner.locationSites.filter((s) => !s?.seasonal).length : null) ??
+    (partner.locations ? partner.locations.length : 1);
+  if (siteCount > 1) {
     tags.push('size:locations:multi_location');
   } else {
     tags.push('size:locations:single_location');
+  }
+
+  if (Array.isArray(partner.tags)) {
+    partner.tags.forEach((t) => {
+      if (typeof t === 'string' && t.trim()) tags.push(`tag:${t.trim()}`);
+    });
   }
   
   // Performance metrics

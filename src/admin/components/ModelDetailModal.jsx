@@ -4,6 +4,7 @@ import { getUrl, list } from 'aws-amplify/storage';
 import { formatPrice } from '../data/services';
 import ModelCardOverview from '../../components/profile/ModelCardOverview';
 import ModelFocusLayout from '../../components/profile/ModelFocusLayout';
+import IdentityDocLinks from './IdentityDocLinks';
 
 const client = generateClient();
 
@@ -556,13 +557,19 @@ export default function ModelDetailModal({ model, onClose, onUpdate }) {
     try {
       // Update model profile with notes, tags, status
       if (model?.id) {
+        const checklistNote = Object.entries(approvalChecklist)
+          .filter(([, v]) => v)
+          .map(([k]) => k)
+          .join(', ');
+        const combinedNotes = [notes, decisionReason && `Decision: ${decisionReason}`, checklistNote && `Checklist: ${checklistNote}`]
+          .filter(Boolean)
+          .join('\n');
+
         await client.models.ModelProfile.update({
           id: model.id,
-          adminNotes: notes,
+          adminNotes: combinedNotes || notes,
           tags: tags,
           status: status,
-          reviewChecklist: JSON.stringify(approvalChecklist),
-          reviewDecisionReason: decisionReason,
         });
         
         if (onUpdate) {
@@ -622,7 +629,15 @@ export default function ModelDetailModal({ model, onClose, onUpdate }) {
               <div style={styles.name}>
                 {model.firstName} {model.lastName}
               </div>
-              <div style={styles.email}>{model.email}</div>
+              <div style={styles.email}>{model.email || 'No email on file'}</div>
+              {model.phone && (
+                <div style={{ ...styles.email, marginTop: '0.25rem' }}>{model.phone}</div>
+              )}
+              {model.locationZip && (
+                <div style={{ ...styles.email, marginTop: '0.15rem', opacity: 0.75 }}>
+                  ZIP {model.locationZip}
+                </div>
+              )}
               <div style={{ marginTop: '0.5rem' }}>
                 <span style={{
                   ...styles.statusBadge,
@@ -680,7 +695,7 @@ export default function ModelDetailModal({ model, onClose, onUpdate }) {
           {activeTab === 'overview' && (
             <div>
               <ModelCardOverview model={model} />
-              <ModelFocusLayout model={model} />
+              <ModelFocusLayout model={model} resolvedPhotoUrls={resolvedGalleryUrls} />
 
               {(modelingFocusRaw ||
                 trainingSummary.length > 0 ||
@@ -915,50 +930,10 @@ export default function ModelDetailModal({ model, onClose, onUpdate }) {
                   <div style={styles.infoValue}>{model.idDocumentType || 'Not specified'}</div>
                 </div>
                 {(model.idDocumentUrl || model.verificationSelfieUrl) && (
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-                    {model.idDocumentUrl && (
-                      <a
-                        href={model.idDocumentUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.55rem 0.9rem',
-                          borderRadius: '8px',
-                          textDecoration: 'none',
-                          border: '1px solid rgba(233,69,96,0.45)',
-                          background: 'rgba(233,69,96,0.18)',
-                          color: '#ffd6df',
-                          fontSize: '0.88rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        View ID Document
-                      </a>
-                    )}
-                    {model.verificationSelfieUrl && (
-                      <a
-                        href={model.verificationSelfieUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          padding: '0.55rem 0.9rem',
-                          borderRadius: '8px',
-                          textDecoration: 'none',
-                          border: '1px solid rgba(233,69,96,0.45)',
-                          background: 'rgba(233,69,96,0.18)',
-                          color: '#ffd6df',
-                          fontSize: '0.88rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        View Selfie
-                      </a>
-                    )}
-                  </div>
+                  <IdentityDocLinks
+                    idDocumentUrl={model.idDocumentUrl}
+                    verificationSelfieUrl={model.verificationSelfieUrl}
+                  />
                 )}
               </div>
               <div style={styles.section}>

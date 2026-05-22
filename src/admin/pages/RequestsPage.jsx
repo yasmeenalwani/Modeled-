@@ -1,17 +1,29 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/data';
-import { services, getServiceById, formatPrice } from '../data/services';
+import { getServiceById } from '../data/services';
 import { createRequest, updateRequestStatus } from '../../utils/requestService';
 import WorkflowProgress from '../../components/workflow/WorkflowProgress';
 import { getWorkflowStage } from '../../utils/workflowState';
 import { getProfessionalById } from '../../utils/profileService';
-import { findMatches, extractZipFromLocation } from '../../matching/matchingEngine';
-import { 
-  getMockRequests, 
-  getMockProfessional,
+import {
+  getMockRequests,
   shouldUseMockData,
 } from '../../utils/mockDataService';
+import {
+  loadAdminProfessionalOptions,
+  resolveProfessionalIdForRequest,
+  resolveProfessionalIdFromSearchParams,
+  getAdminProfessionalProfile,
+} from '../../utils/adminProfessionalOptions';
+import AdminRequestIntakeModal, { INITIAL_REQUEST_FORM } from '../components/AdminRequestIntakeModal';
+import {
+  valueForDb,
+  serializeExtendedCriteria,
+  serializeSchedulingNotes,
+  resolveRequestDateTime,
+  validateIntakeScheduling,
+} from '../../utils/requestIntakeOptions';
 
 let client;
 try {
@@ -253,30 +265,6 @@ const getTimeAgo = (dateString) => {
 };
 
 const LOCAL_PRO_CRM_TIMELINE_KEY = 'modeled_pro_crm_timeline_v1';
-const INTAKE_FIELD_GUIDE = [
-  ['Professional', 'Which pro this request belongs to.'],
-  ['Request title', 'Short internal name for this intake.'],
-  ['Service type', 'Main service being requested (blowdry, color, etc.).'],
-  ['Model count', 'How many models are needed for this request.'],
-  ['Duration', 'Estimated minutes per session.'],
-  ['Stylist level', 'Target level for who should handle this service.'],
-  ['Desired hair filters', 'Match criteria for color, length, texture, condition.'],
-  ['Priority', 'How urgent this request is.'],
-  ['Status', 'Workflow state when created.'],
-  ['Requested date/time', 'Primary appointment slot if fixed.'],
-  ['Scheduling flexibility', 'Fixed vs flexible scheduling tolerance.'],
-  ['Recurring cadence', 'One-time, weekly, biweekly, or monthly pattern.'],
-  ['Recurring weeks', 'How long the recurring series should run.'],
-  ['Multiple date options', 'Alternative slots if not fixed (one per line).'],
-  ['Location ZIP + address', 'Where appointment happens for matching/logistics.'],
-  ['Quoted service price', 'Total service price per model/session.'],
-  ['Pro fee charged by Modeled', 'Fee paid by pro side (per model/session).'],
-  ['Model payout', 'What model receives (per model/session).'],
-  ['Pro/model fee %', 'Optional percent tracking for quote consistency.'],
-  ['Service brief for models', 'What the model sees as request context.'],
-  ['Conversation discovery fields', 'CRM context from your stylist conversation.'],
-  ['Internal admin notes', 'Private ops notes not shown externally.'],
-];
 
 export default function RequestsPage() {
   const navigate = useNavigate();
@@ -291,45 +279,7 @@ export default function RequestsPage() {
   const [professionalOptions, setProfessionalOptions] = useState([]);
   const [professionalProfilesById, setProfessionalProfilesById] = useState({});
   const [modelProfilesForPreview, setModelProfilesForPreview] = useState([]);
-  const [createForm, setCreateForm] = useState({
-    professionalId: '',
-    requestTitle: '',
-    serviceType: 'blowdry',
-    serviceDescription: '',
-    desiredHairColor: 'Any',
-    desiredHairLength: 'Any',
-    desiredHairTexture: 'Any',
-    desiredHairCondition: 'Any',
-    requestedDate: '',
-    requestedTime: '',
-    multipleDatesText: '',
-    schedulingFlexibility: 'fixed',
-    recurringCadence: 'none',
-    recurringWeeks: 4,
-    duration: 60,
-    location: '',
-    locationZip: '',
-    modelSearchFee: '',
-    modelPayment: '',
-    quotedServicePrice: '',
-    proFeePercent: '',
-    modelFeePercent: '',
-    adminNotes: '',
-    modelCount: 1,
-    stylistLevel: 'all_levels',
-    goalPrimary: '',
-    educationFocus: '',
-    knownChallenges: '',
-    mustAvoid: '',
-    desiredOutcome: '',
-    conversationNotes: '',
-    priority: 'normal',
-    status: 'matching',
-  });
-  const hairColorOptions = ['Any', 'Black', 'Brown', 'Blonde', 'Red', 'Gray', 'Fashion Color'];
-  const hairLengthOptions = ['Any', 'Short', 'Medium', 'Long', 'Extra Long'];
-  const hairTextureOptions = ['Any', 'Straight', 'Wavy', 'Curly', 'Coily'];
-  const hairConditionOptions = ['Any', 'Healthy', 'Color Treated', 'Virgin', 'Damaged'];
+  const [createForm, setCreateForm] = useState({ ...INITIAL_REQUEST_FORM });
 
   // Reload every time this page is navigated to
   useEffect(() => {
@@ -348,77 +298,24 @@ export default function RequestsPage() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const shouldOpenCreate = params.get('create') === '1';
-    const professionalId = params.get('professionalId');
+    const professionalId = resolveProfessionalIdFromSearchParams(params);
     if (shouldOpenCreate) {
       setShowCreateModal(true);
       if (professionalId) {
-        setCreateForm((prev) => ({ ...prev, professionalId }));
+        setCreateForm((prev) => ({
+          ...prev,
+          professionalId,
+          serviceType: professionalId.includes('scott') ? 'haircut' : prev.serviceType,
+          stylistLevel: professionalId.includes('scott') ? 'senior' : prev.stylistLevel,
+        }));
       }
     }
   }, [location.search]);
 
-  useEffect(() => {
-    const svc = getServiceById(createForm.serviceType);
-    if (!svc) return;
-    setCreateForm((prev) => ({
-      ...prev,
-      duration: prev.duration || svc.duration || 60,
-      modelSearchFee: prev.modelSearchFee || svc.professionalFee || '',
-      modelPayment: prev.modelPayment || svc.modelFee || '',
-    }));
-  }, [createForm.serviceType]);
-
-  useEffect(() => {
-    if (!createForm.professionalId) return;
-    const selectedPro = professionalProfilesById[createForm.professionalId];
-    if (!selectedPro) return;
-
-    const composedAddress =
-      selectedPro.salonAddress ||
-      [selectedPro.salonStreet, selectedPro.salonCity, selectedPro.salonState, selectedPro.salonZip]
-        .filter(Boolean)
-        .join(', ');
-    const zipFromProfile = selectedPro.salonZip || selectedPro.locationZip || '';
-
-    setCreateForm((prev) => {
-      const next = { ...prev };
-      if (!prev.location || prev.location.trim() === '') next.location = composedAddress || '';
-      if (!prev.locationZip || prev.locationZip.trim() === '') next.locationZip = String(zipFromProfile || '');
-      return next;
-    });
-  }, [createForm.professionalId, professionalProfilesById]);
-
   const loadProfessionalOptions = async () => {
-    try {
-      if (!shouldUseMockData() && client?.models?.Professional) {
-        const { data, errors } = await client.models.Professional.list({ limit: 200 });
-        if (!errors?.length && data?.length) {
-          const byId = {};
-          data.forEach((p) => { byId[p.id] = p; });
-          setProfessionalProfilesById(byId);
-          setProfessionalOptions(
-            data.map((p) => ({
-              id: p.id,
-              label: `${p.firstName || ''} ${p.lastName || ''}`.trim() || p.email || p.id,
-            }))
-          );
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not load professionals for request form:', e);
-    }
-    const mockPro = getMockProfessional('mock-pro-1');
-    if (mockPro?.id) {
-      setProfessionalProfilesById({ [mockPro.id]: mockPro });
-    } else {
-      setProfessionalProfilesById({});
-    }
-    setProfessionalOptions(
-      mockPro
-        ? [{ id: mockPro.id, label: `${mockPro.firstName || ''} ${mockPro.lastName || ''}`.trim() || mockPro.email || mockPro.id }]
-        : []
-    );
+    const { options, byId } = await loadAdminProfessionalOptions();
+    setProfessionalProfilesById(byId);
+    setProfessionalOptions(options);
   };
 
   const loadModelsForPreview = async () => {
@@ -435,132 +332,6 @@ export default function RequestsPage() {
     }
     setModelProfilesForPreview([]);
   };
-
-  const matchingServiceId = (serviceType) => {
-    const map = {
-      haircut: 'haircut',
-      cut: 'haircut',
-      color: 'color',
-      blowdry: 'blowdry',
-      blowout: 'blowdry',
-      styling: 'blowdry',
-      gloss: 'gloss',
-      highlights: 'highlights',
-      keratin: 'keratin',
-    };
-    return map[serviceType] || serviceType || 'haircut';
-  };
-
-  const toMatchingModel = (model) => ({
-    id: model.id,
-    firstName: model.firstName,
-    lastName: model.lastName,
-    locationZip: model.locationZip,
-    willingToTravel: model.willingToTravel,
-    travelRadius: model.travelRadius,
-    hairLength: model.hairLengthSimple || model.hairLength,
-    hairColor: model.hairColorSimple || model.hairColor,
-    hairTexture: model.hairTextureSimple || model.hairTexture,
-    hairCondition: model.hairCondition,
-    virginHair: model.virginHair ?? (model.hairCondition === 'virgin'),
-    openToHaircut: model.openToHaircut,
-    openToColor: model.openToColor,
-    openToStyling: model.openToStyling,
-    openToMakeup: model.openToMakeup,
-    openToNails: model.openToNails,
-    openToSkincare: model.openToSkincare,
-    availability: model.availability || {},
-    cardOnFileStatus: model.cardOnFileStatus || 'valid',
-    agenticScores: model.agenticScores || {
-      reliability: 50,
-      feedback: 50,
-      experience: 50,
-      engagement: 50,
-      compatibility: 50,
-    },
-  });
-
-  const liveMatchPreview = useMemo(() => {
-    if (!showCreateModal || !createForm.serviceType) {
-      return { eligible: 0, qualified: 0, avgScore: 0 };
-    }
-    try {
-      const selectedPro = createForm.professionalId ? professionalProfilesById[createForm.professionalId] : null;
-      const requestLocationZip = createForm.locationZip || extractZipFromLocation(createForm.location || '');
-      const fallbackZip = selectedPro?.locationZip || extractZipFromLocation(selectedPro?.salonAddress || '');
-      const locationForMatching = requestLocationZip || fallbackZip || createForm.location || '';
-      const salonCoords =
-        selectedPro?.salonLat != null && selectedPro?.salonLng != null
-          ? { lat: selectedPro.salonLat, lng: selectedPro.salonLng }
-          : null;
-
-      const criteria = {};
-      if (createForm.desiredHairColor && createForm.desiredHairColor !== 'Any') criteria.hairColor = createForm.desiredHairColor;
-      if (createForm.desiredHairLength && createForm.desiredHairLength !== 'Any') criteria.hairLength = createForm.desiredHairLength;
-      if (createForm.desiredHairTexture && createForm.desiredHairTexture !== 'Any') criteria.hairTexture = createForm.desiredHairTexture;
-      if (createForm.desiredHairCondition && createForm.desiredHairCondition !== 'Any') criteria.hairCondition = createForm.desiredHairCondition;
-      if ((createForm.desiredHairCondition || '').toLowerCase() === 'virgin') criteria.virginHair = true;
-
-      const formattedRequest = {
-        serviceType: createForm.serviceType,
-        serviceId: matchingServiceId(createForm.serviceType),
-        requestedDate: createForm.requestedDate || null,
-        requestedTime: createForm.requestedTime || null,
-        location: locationForMatching,
-        salonCoords,
-        salonZip: requestLocationZip || fallbackZip || null,
-        criteria,
-      };
-
-      const models = modelProfilesForPreview
-        .filter((m) => m && m.id)
-        .map(toMatchingModel);
-      const result = findMatches(models, formattedRequest, { minScore: 30, limit: 1000 });
-      return {
-        eligible: models.length,
-        qualified: result.qualifiedMatches || 0,
-        avgScore: result.averageScore || 0,
-      };
-    } catch (previewError) {
-      console.warn('Live match preview failed:', previewError);
-      return { eligible: 0, qualified: 0, avgScore: 0 };
-    }
-  }, [showCreateModal, createForm, modelProfilesForPreview, professionalProfilesById]);
-
-  const pricingSummary = useMemo(() => {
-    const modelCount = Math.max(1, Number(createForm.modelCount) || 1);
-    const servicePrice = Number(createForm.quotedServicePrice) || 0;
-    const modelPayoutEach = Number(createForm.modelPayment) || 0;
-    const proFeeEach = Number(createForm.modelSearchFee) || 0;
-    const modelTotal = modelPayoutEach * modelCount;
-    const proTotal = proFeeEach * modelCount;
-    const modeledRevenue = modelTotal + proTotal;
-    const estimatedSessionGross = servicePrice > 0 ? servicePrice * modelCount : 0;
-    return {
-      modelTotal,
-      proTotal,
-      modeledRevenue,
-      estimatedSessionGross,
-    };
-  }, [createForm.modelCount, createForm.quotedServicePrice, createForm.modelPayment, createForm.modelSearchFee]);
-
-  const createRequestReadiness = useMemo(() => {
-    const hasProfessional = Boolean(createForm.professionalId);
-    const hasLocation = Boolean((createForm.location || '').trim());
-    const hasPrimarySlot = Boolean(createForm.requestedDate && createForm.requestedTime);
-    const hasMultipleDates = Boolean((createForm.multipleDatesText || '').trim());
-    const hasScheduling = hasPrimarySlot || hasMultipleDates;
-
-    const missing = [];
-    if (!hasProfessional) missing.push('Professional');
-    if (!hasLocation) missing.push('Location');
-    if (!hasScheduling) missing.push('Date/Time or multiple date options');
-
-    return {
-      canCreate: hasProfessional && hasLocation && hasScheduling,
-      missing,
-    };
-  }, [createForm.professionalId, createForm.location, createForm.requestedDate, createForm.requestedTime, createForm.multipleDatesText]);
 
   const loadRequests = async () => {
     try {
@@ -607,7 +378,9 @@ export default function RequestsPage() {
           
           try {
             if (req.professionalId) {
-              professional = await getProfessionalById(req.professionalId) || getMockProfessional(req.professionalId);
+              professional =
+                getAdminProfessionalProfile(req.professionalId, professionalProfilesById) ||
+                (await getProfessionalById(req.professionalId));
             }
           } catch (err) {
             console.error(`Error loading professional for request ${req.id}:`, err);
@@ -666,7 +439,9 @@ export default function RequestsPage() {
       try {
         const mockRequests = getMockRequests();
         const enrichedRequests = await Promise.all(mockRequests.map(async (req) => {
-          const professional = await getProfessionalById(req.professionalId) || getMockProfessional(req.professionalId);
+          const professional =
+            getAdminProfessionalProfile(req.professionalId, professionalProfilesById) ||
+            (await getProfessionalById(req.professionalId));
           return {
             id: req.id,
             professional: {
@@ -762,44 +537,53 @@ export default function RequestsPage() {
   };
 
   const handleCreateRequest = async () => {
-    if (!createRequestReadiness.canCreate) {
-      alert('Please complete professional, location, and either a primary date/time or multiple date options.');
+    if (!createForm.professionalId || !createForm.serviceType) {
+      alert('Please choose a stylist and service.');
+      return;
+    }
+    const sched = validateIntakeScheduling(createForm);
+    if (!sched.ok) {
+      alert(`Please complete scheduling: ${sched.missing.join(', ')}`);
       return;
     }
     try {
       setCreatingRequest(true);
+      const { resolveProfessionalIdForIntake } = await import(
+        '../../utils/resolveIntakeProfessional'
+      );
+      const { professionalId: resolvedProId, publishWarning } = await resolveProfessionalIdForIntake(
+          createForm.professionalId,
+          professionalProfilesById
+        );
+
+      const { requestedDate, requestedTime } = resolveRequestDateTime(createForm);
+      if (!requestedDate) {
+        throw new Error('Could not resolve a date for this request. Check scheduling fields.');
+      }
+
+      const criteriaBlob = serializeExtendedCriteria(createForm);
+      const schedulingNote = serializeSchedulingNotes(createForm);
       const discoveryNotes = [
         createForm.requestTitle ? `Request title: ${createForm.requestTitle}` : null,
         `Model count needed: ${Number(createForm.modelCount) || 1}`,
         `Stylist level target: ${createForm.stylistLevel || 'all_levels'}`,
-        createForm.goalPrimary ? `Primary goal: ${createForm.goalPrimary}` : null,
-        createForm.educationFocus ? `Current education/training focus: ${createForm.educationFocus}` : null,
-        createForm.knownChallenges ? `Known challenges: ${createForm.knownChallenges}` : null,
-        createForm.mustAvoid ? `Must avoid: ${createForm.mustAvoid}` : null,
-        createForm.desiredOutcome ? `Desired outcome: ${createForm.desiredOutcome}` : null,
-        createForm.conversationNotes ? `Conversation notes: ${createForm.conversationNotes}` : null,
-        `Scheduling flexibility: ${createForm.schedulingFlexibility || 'fixed'}`,
-        `Recurring cadence: ${createForm.recurringCadence || 'none'}`,
-        `Recurring weeks: ${Number(createForm.recurringWeeks) || 0}`,
-        createForm.multipleDatesText ? `Multiple date options:\n${createForm.multipleDatesText}` : null,
-        createForm.quotedServicePrice ? `Quoted service price: $${Number(createForm.quotedServicePrice) || 0}` : null,
-        createForm.proFeePercent ? `Pro fee percent: ${createForm.proFeePercent}%` : null,
-        createForm.modelFeePercent ? `Model fee percent: ${createForm.modelFeePercent}%` : null,
+        schedulingNote,
         createForm.adminNotes ? `Admin notes: ${createForm.adminNotes}` : null,
+        criteriaBlob || null,
       ].filter(Boolean).join('\n');
 
-      const created = await createRequest({
-        professionalId: createForm.professionalId,
+      let created = await createRequest({
+        professionalId: resolvedProId,
         serviceType: createForm.serviceType,
         serviceDescription: createForm.serviceDescription
-          ? `${createForm.serviceDescription}\n\nModel count requested: ${Number(createForm.modelCount) || 1}\nStylist level: ${createForm.stylistLevel || 'all_levels'}\nScheduling: ${createForm.schedulingFlexibility || 'fixed'} / ${createForm.recurringCadence || 'none'}`
-          : null,
-        desiredHairColor: createForm.desiredHairColor || null,
-        desiredHairLength: createForm.desiredHairLength || null,
-        desiredHairTexture: createForm.desiredHairTexture || null,
-        desiredHairCondition: createForm.desiredHairCondition || null,
-        requestedDate: createForm.requestedDate || null,
-        requestedTime: createForm.requestedTime || null,
+          ? `${createForm.serviceDescription}\n\nModels needed: ${Number(createForm.modelCount) || 1}\nStylist level: ${createForm.stylistLevel || 'senior'}`
+          : `Models needed: ${Number(createForm.modelCount) || 1}`,
+        desiredHairColor: valueForDb('color', createForm.desiredHairColor),
+        desiredHairLength: valueForDb('length', createForm.desiredHairLength),
+        desiredHairTexture: valueForDb('texture', createForm.desiredHairTexture),
+        desiredHairCondition: valueForDb('condition', createForm.desiredHairCondition),
+        requestedDate,
+        requestedTime,
         duration: Number(createForm.duration) || 60,
         location: createForm.location || null,
         locationZip: createForm.locationZip || null,
@@ -812,7 +596,7 @@ export default function RequestsPage() {
 
       try {
         const existing = JSON.parse(localStorage.getItem(LOCAL_PRO_CRM_TIMELINE_KEY) || '{}');
-        const proId = createForm.professionalId;
+        const proId = resolvedProId;
         const timeline = Array.isArray(existing[proId]) ? existing[proId] : [];
         timeline.unshift({
           type: 'request_intake',
@@ -836,35 +620,20 @@ export default function RequestsPage() {
       }
       await loadRequests();
       setShowCreateModal(false);
-      setCreateForm((prev) => ({
-        ...prev,
-        serviceDescription: '',
-        requestTitle: '',
-        requestedDate: '',
-        requestedTime: '',
-        multipleDatesText: '',
-        schedulingFlexibility: 'fixed',
-        recurringCadence: 'none',
-        recurringWeeks: 4,
-        location: '',
-        locationZip: '',
-        modelSearchFee: '',
-        modelPayment: '',
-        quotedServicePrice: '',
-        proFeePercent: '',
-        modelFeePercent: '',
-        adminNotes: '',
-        modelCount: 1,
-        stylistLevel: 'all_levels',
-        goalPrimary: '',
-        educationFocus: '',
-        knownChallenges: '',
-        mustAvoid: '',
-        desiredOutcome: '',
-        conversationNotes: '',
-      }));
+      setCreateForm({
+        ...INITIAL_REQUEST_FORM,
+        professionalId: resolvedProId,
+      });
+      await loadProfessionalOptions();
       if (created?.id) {
-        navigate(`/admin/matching?requestId=${created.id}`);
+        if (notices.length) {
+          alert(
+            `Request created (id: ${created.id}).\n\n${notices.join('\n\n')}\n\nOpening matching now.`
+          );
+        }
+        navigate(`/admin/match-approval?requestId=${created.id}`);
+      } else {
+        alert('Request was processed but no id was returned. Check the request queue.');
       }
     } catch (e) {
       console.error('Create request failed:', e);
@@ -1174,189 +943,18 @@ export default function RequestsPage() {
         )}
       </div>
 
-      {showCreateModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 2000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem',
-        }} onClick={() => !creatingRequest && setShowCreateModal(false)}>
-          <div style={{
-            width: '100%', maxWidth: '980px', background: '#111827', border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '12px', padding: '1.25rem', maxHeight: '92vh', overflowY: 'auto',
-          }} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ marginBottom: '0.35rem' }}>Create Request (Advanced Intake)</h3>
-            <p style={{ marginBottom: '1rem', color: 'rgba(255,255,255,0.65)', fontSize: '0.85rem' }}>
-              Capture full request detail for accurate matching and booking.
-            </p>
-            <details style={{ marginBottom: '0.95rem', border: '1px solid rgba(255,255,255,0.14)', borderRadius: '10px', padding: '0.65rem 0.75rem', background: 'rgba(255,255,255,0.03)' }}>
-              <summary style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#ffd8a8' }}>
-                Field labels and what each one means
-              </summary>
-              <div style={{ marginTop: '0.65rem', display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.45rem 0.75rem', fontSize: '0.78rem' }}>
-                {INTAKE_FIELD_GUIDE.map(([label, desc]) => (
-                  <React.Fragment key={label}>
-                    <div style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 600 }}>{label}</div>
-                    <div style={{ color: 'rgba(255,255,255,0.68)' }}>{desc}</div>
-                  </React.Fragment>
-                ))}
-              </div>
-            </details>
-            <div style={{
-              marginBottom: '0.95rem',
-              padding: '0.7rem 0.85rem',
-              borderRadius: '9px',
-              border: '1px solid rgba(76,175,80,0.35)',
-              background: 'rgba(76,175,80,0.08)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '0.65rem',
-              flexWrap: 'wrap',
-              fontSize: '0.82rem',
-            }}>
-              <span style={{ color: 'rgba(255,255,255,0.85)' }}>Live fit preview while you intake:</span>
-              <span style={{ color: '#b9f6ca', fontWeight: 700 }}>
-                {liveMatchPreview.qualified} / {liveMatchPreview.eligible} models currently match
-              </span>
-              <span style={{ color: 'rgba(255,255,255,0.65)' }}>
-                avg score {liveMatchPreview.avgScore}
-              </span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-              <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em' }}>Professional + Service</div>
-              <select value={createForm.professionalId} onChange={(e) => setCreateForm({ ...createForm, professionalId: e.target.value })} style={styles.selectorSelect}>
-                <option value="">Select professional</option>
-                {professionalOptions.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-              </select>
-              <input value={createForm.requestTitle} onChange={(e) => setCreateForm({ ...createForm, requestTitle: e.target.value })} placeholder="Request title (ex: Blonde refresh campaign)" style={styles.selectorSelect} />
-              <select value={createForm.serviceType} onChange={(e) => setCreateForm({ ...createForm, serviceType: e.target.value })} style={styles.selectorSelect}>
-                {(services || []).map((svc) => (
-                  <option key={svc.id} value={svc.id}>{svc.name}</option>
-                ))}
-              </select>
-              <input type="number" min="1" step="1" value={createForm.modelCount} onChange={(e) => setCreateForm({ ...createForm, modelCount: e.target.value })} placeholder="How many models needed?" style={styles.selectorSelect} />
-              <input type="number" min="0" step="1" value={createForm.duration} onChange={(e) => setCreateForm({ ...createForm, duration: e.target.value })} placeholder="Duration (minutes)" style={styles.selectorSelect} />
-              <select value={createForm.stylistLevel} onChange={(e) => setCreateForm({ ...createForm, stylistLevel: e.target.value })} style={styles.selectorSelect}>
-                <option value="all_levels">Stylist level: All levels</option>
-                <option value="student">Stylist level: Student</option>
-                <option value="apprentice">Stylist level: Apprentice</option>
-                <option value="junior">Stylist level: Junior</option>
-                <option value="senior">Stylist level: Senior</option>
-                <option value="master">Stylist level: Master</option>
-              </select>
-
-              <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em', marginTop: '0.3rem' }}>Desired Model Profile</div>
-              <select value={createForm.desiredHairColor} onChange={(e) => setCreateForm({ ...createForm, desiredHairColor: e.target.value })} style={styles.selectorSelect}>
-                {hairColorOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              <select value={createForm.desiredHairLength} onChange={(e) => setCreateForm({ ...createForm, desiredHairLength: e.target.value })} style={styles.selectorSelect}>
-                {hairLengthOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              <select value={createForm.desiredHairTexture} onChange={(e) => setCreateForm({ ...createForm, desiredHairTexture: e.target.value })} style={styles.selectorSelect}>
-                {hairTextureOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              <select value={createForm.desiredHairCondition} onChange={(e) => setCreateForm({ ...createForm, desiredHairCondition: e.target.value })} style={styles.selectorSelect}>
-                {hairConditionOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-              <select value={createForm.priority} onChange={(e) => setCreateForm({ ...createForm, priority: e.target.value })} style={styles.selectorSelect}>
-                <option value="normal">Normal</option>
-                <option value="urgent">Urgent</option>
-                <option value="high">High</option>
-                <option value="low">Low</option>
-              </select>
-              <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })} style={styles.selectorSelect}>
-                <option value="matching">Matching</option>
-                <option value="pending">Pending</option>
-                <option value="sent">Sent</option>
-              </select>
-
-              <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em', marginTop: '0.3rem' }}>Booking Details</div>
-              <input type="date" value={createForm.requestedDate} onChange={(e) => setCreateForm({ ...createForm, requestedDate: e.target.value })} style={styles.selectorSelect} />
-              <input type="time" value={createForm.requestedTime} onChange={(e) => setCreateForm({ ...createForm, requestedTime: e.target.value })} style={styles.selectorSelect} />
-              <input value={createForm.locationZip} onChange={(e) => setCreateForm({ ...createForm, locationZip: e.target.value.replace(/[^\d]/g, '').slice(0, 5) })} placeholder="ZIP code (optional)" style={styles.selectorSelect} />
-              <input value={createForm.location} onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })} placeholder="Location / salon address" style={{ ...styles.selectorSelect, gridColumn: '1 / -1' }} />
-              <select value={createForm.schedulingFlexibility} onChange={(e) => setCreateForm({ ...createForm, schedulingFlexibility: e.target.value })} style={styles.selectorSelect}>
-                <option value="fixed">Schedule: Fixed date/time</option>
-                <option value="slightly_flexible">Schedule: Slightly flexible</option>
-                <option value="flexible">Schedule: Flexible</option>
-              </select>
-              <select value={createForm.recurringCadence} onChange={(e) => setCreateForm({ ...createForm, recurringCadence: e.target.value })} style={styles.selectorSelect}>
-                <option value="none">Recurring: One-time</option>
-                <option value="weekly">Recurring: Every week</option>
-                <option value="biweekly">Recurring: Every other week</option>
-                <option value="monthly">Recurring: Monthly</option>
-              </select>
-              <input
-                type="number"
-                min="1"
-                max="52"
-                value={createForm.recurringWeeks}
-                onChange={(e) => setCreateForm({ ...createForm, recurringWeeks: e.target.value })}
-                placeholder="Recurring for how many weeks"
-                style={styles.selectorSelect}
-              />
-              <textarea
-                value={createForm.multipleDatesText}
-                onChange={(e) => setCreateForm({ ...createForm, multipleDatesText: e.target.value })}
-                placeholder="Multiple date options (one per line), ex: 2026-05-12 10:00 AM"
-                style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 72 }}
-              />
-
-              <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em', marginTop: '0.3rem' }}>Economics + Notes</div>
-              <input type="number" min="0" step="1" value={createForm.quotedServicePrice} onChange={(e) => setCreateForm({ ...createForm, quotedServicePrice: e.target.value })} placeholder="Quoted service price per model/session ($)" style={styles.selectorSelect} />
-              <input type="number" min="0" step="1" value={createForm.modelSearchFee} onChange={(e) => setCreateForm({ ...createForm, modelSearchFee: e.target.value })} placeholder="Pro fee charged by Modeled ($)" style={styles.selectorSelect} />
-              <input type="number" min="0" step="1" value={createForm.modelPayment} onChange={(e) => setCreateForm({ ...createForm, modelPayment: e.target.value })} placeholder="Model payout ($)" style={styles.selectorSelect} />
-              <input type="number" min="0" step="1" value={createForm.proFeePercent} onChange={(e) => setCreateForm({ ...createForm, proFeePercent: e.target.value })} placeholder="Pro fee percent (%)" style={styles.selectorSelect} />
-              <input type="number" min="0" step="1" value={createForm.modelFeePercent} onChange={(e) => setCreateForm({ ...createForm, modelFeePercent: e.target.value })} placeholder="Model fee percent (%)" style={styles.selectorSelect} />
-              <div style={{ ...styles.selectorSelect, gridColumn: '1 / -1', background: 'rgba(255,255,255,0.03)' }}>
-                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)' }}>Pricing preview ({Number(createForm.modelCount) || 1} model{(Number(createForm.modelCount) || 1) > 1 ? 's' : ''})</div>
-                <div style={{ marginTop: '0.35rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.82rem' }}>
-                  <span style={{ color: '#81c784' }}>Model payout total: ${pricingSummary.modelTotal}</span>
-                  <span style={{ color: '#667eea' }}>Pro fee total: ${pricingSummary.proTotal}</span>
-                  <span style={{ color: '#f5c16c' }}>Modeled revenue: ${pricingSummary.modeledRevenue}</span>
-                  {pricingSummary.estimatedSessionGross > 0 && (
-                    <span style={{ color: 'rgba(255,255,255,0.75)' }}>Estimated session gross: ${pricingSummary.estimatedSessionGross}</span>
-                  )}
-                </div>
-              </div>
-              <div style={{ gridColumn: '1 / -1', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em', marginTop: '0.3rem' }}>Conversation Discovery (saved in CRM notes)</div>
-              <input value={createForm.goalPrimary} onChange={(e) => setCreateForm({ ...createForm, goalPrimary: e.target.value })} placeholder="Primary goal for this request (portfolio, training, campaign, content)" style={{ ...styles.selectorSelect, gridColumn: '1 / -1' }} />
-              <textarea value={createForm.educationFocus} onChange={(e) => setCreateForm({ ...createForm, educationFocus: e.target.value })} placeholder="Current education/training focus from pro conversation" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 72 }} />
-              <textarea value={createForm.knownChallenges} onChange={(e) => setCreateForm({ ...createForm, knownChallenges: e.target.value })} placeholder="Known challenges or constraints shared by stylist/salon" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 72 }} />
-              <textarea value={createForm.mustAvoid} onChange={(e) => setCreateForm({ ...createForm, mustAvoid: e.target.value })} placeholder="Must avoid / non-negotiables" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 72 }} />
-              <textarea value={createForm.desiredOutcome} onChange={(e) => setCreateForm({ ...createForm, desiredOutcome: e.target.value })} placeholder="Desired outcome and success metric for this request" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 72 }} />
-              <textarea value={createForm.conversationNotes} onChange={(e) => setCreateForm({ ...createForm, conversationNotes: e.target.value })} placeholder="Anecdotal conversation notes for CRM context" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 90 }} />
-              <textarea value={createForm.serviceDescription} onChange={(e) => setCreateForm({ ...createForm, serviceDescription: e.target.value })} placeholder="Service brief for models (what this request is for)" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 80 }} />
-              <textarea value={createForm.adminNotes} onChange={(e) => setCreateForm({ ...createForm, adminNotes: e.target.value })} placeholder="Internal admin notes (not shown to model)" style={{ ...styles.selectorSelect, gridColumn: '1 / -1', minHeight: 70 }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem', marginTop: '1rem' }}>
-              <button onClick={() => setShowCreateModal(false)} disabled={creatingRequest} style={styles.viewBtn}>Cancel</button>
-              <button
-                onClick={handleCreateRequest}
-                disabled={creatingRequest || !createRequestReadiness.canCreate}
-                title={!createRequestReadiness.canCreate ? `Missing: ${createRequestReadiness.missing.join(', ')}` : ''}
-                style={{
-                  ...styles.matchBtn,
-                  ...(creatingRequest || !createRequestReadiness.canCreate
-                    ? { opacity: 0.6, cursor: 'not-allowed', transform: 'none' }
-                    : {}),
-                }}
-              >
-                {creatingRequest
-                  ? 'Creating...'
-                  : createRequestReadiness.canCreate
-                    ? 'Create & Open Matching'
-                    : 'Complete Required Fields'}
-              </button>
-            </div>
-            {!createRequestReadiness.canCreate && (
-              <div style={{ marginTop: '0.55rem', color: 'rgba(255,255,255,0.62)', fontSize: '0.78rem' }}>
-                Required before request submit: {createRequestReadiness.missing.join(' • ')}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <AdminRequestIntakeModal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateRequest}
+        creating={creatingRequest}
+        form={createForm}
+        setForm={setCreateForm}
+        professionalOptions={professionalOptions}
+        professionalProfilesById={professionalProfilesById}
+        modelProfilesForPreview={modelProfilesForPreview}
+        getServiceById={getServiceById}
+      />
     </div>
   );
 }

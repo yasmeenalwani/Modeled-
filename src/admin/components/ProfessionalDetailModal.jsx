@@ -1,7 +1,20 @@
 import React, { useState } from 'react';
 import { generateClient } from 'aws-amplify/data';
+import IdentityDocLinks from './IdentityDocLinks';
+import { draftToProfessionalCreatePayload } from '../../utils/professionalProfile';
 
 const client = generateClient();
+
+const draftBannerStyle = {
+  margin: '0 2rem 1rem',
+  padding: '1rem 1.25rem',
+  borderRadius: '10px',
+  background: 'rgba(102,126,234,0.15)',
+  border: '1px solid rgba(102,126,234,0.35)',
+  fontSize: '0.88rem',
+  lineHeight: 1.5,
+  color: 'rgba(255,255,255,0.85)',
+};
 
 // Reuse styles from ModelDetailModal (in production, extract to shared file)
 const styles = {
@@ -243,17 +256,28 @@ export default function ProfessionalDetailModal({ professional, onClose, onUpdat
   });
   const [decisionReason, setDecisionReason] = useState('');
   const isReadyForMatching = Object.values(approvalChecklist).every(Boolean) && status === 'approved';
-  
+  const isDraft = professional?.isDraft || String(professional?.id || '').startsWith('draft:');
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      if (isDraft) {
+        alert('Use “Publish to database” to save this imported professional.');
+        return;
+      }
       if (professional?.id) {
+        const checklistNote = Object.entries(approvalChecklist)
+          .filter(([, v]) => v)
+          .map(([k]) => k)
+          .join(', ');
+        const combinedNotes = [notes, decisionReason && `Decision: ${decisionReason}`, checklistNote && `Checklist: ${checklistNote}`]
+          .filter(Boolean)
+          .join('\n');
+
         await client.models.Professional.update({
           id: professional.id,
-          adminNotes: notes,
+          adminNotes: combinedNotes || notes,
           status: status,
-          reviewChecklist: JSON.stringify(approvalChecklist),
-          reviewDecisionReason: decisionReason,
         });
         
         if (onUpdate) {
@@ -265,6 +289,28 @@ export default function ProfessionalDetailModal({ professional, onClose, onUpdat
     } catch (error) {
       console.error('Error saving:', error);
       alert(`❌ Error: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePublishDraft = async () => {
+    if (!isDraft) return;
+    setSaving(true);
+    try {
+      let partnerId = professional.partnerId || null;
+      if (!partnerId && professional.partnerSlug && client?.models?.Partner) {
+        const { data } = await client.models.Partner.list({ limit: 200 });
+        partnerId = (data || []).find((p) => p.slug === professional.partnerSlug)?.id || null;
+      }
+      const payload = draftToProfessionalCreatePayload(professional, { partnerId });
+      await client.models.Professional.create(payload);
+      alert('✅ Professional published. They will appear on the Roman K team once partner is linked.');
+      if (onUpdate) onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Publish professional draft failed:', error);
+      alert(`Could not publish: ${error.message}`);
     } finally {
       setSaving(false);
     }
@@ -312,8 +358,22 @@ export default function ProfessionalDetailModal({ professional, onClose, onUpdat
             <div style={styles.headerInfo}>
               <div style={styles.name}>
                 {professional.firstName} {professional.lastName}
+                {professional.title && (
+                  <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem' }}>
+                    {' '}· {professional.title}
+                  </span>
+                )}
               </div>
               <div style={styles.email}>{professional.email}</div>
+              {professional.phone && (
+                <div style={{ ...styles.email, marginTop: '0.15rem' }}>{professional.phone}</div>
+              )}
+              {(professional.salonName || professional.salonLocationSuffix) && (
+                <div style={{ ...styles.email, marginTop: '0.15rem', opacity: 0.75 }}>
+                  {professional.salonName}
+                  {professional.salonLocationSuffix ? ` · ${professional.salonLocationSuffix}` : ''}
+                </div>
+              )}
               <div style={{ marginTop: '0.5rem' }}>
                 <span style={{
                   ...styles.statusBadge,
@@ -342,6 +402,23 @@ export default function ProfessionalDetailModal({ professional, onClose, onUpdat
           </div>
           <button style={styles.closeBtn} onClick={onClose}>✕ Close</button>
         </div>
+
+        {isDraft && (
+          <div style={draftBannerStyle}>
+            <strong>Admin draft</strong> — {professional.firstName} {professional.lastName} at{' '}
+            {professional.salonName || 'partner'} ({professional.experienceLevel || 'senior'}).
+            <div style={{ marginTop: '0.75rem' }}>
+              <button
+                type="button"
+                style={{ ...styles.btn, ...styles.btnPrimary }}
+                onClick={handlePublishDraft}
+                disabled={saving}
+              >
+                {saving ? 'Publishing…' : 'Publish to database'}
+              </button>
+            </div>
+          </div>
+        )}
         
         <div style={styles.tabs}>
           {[
@@ -571,18 +648,10 @@ export default function ProfessionalDetailModal({ professional, onClose, onUpdat
                   <div style={styles.infoValue}>{professional.idDocumentType || 'Not specified'}</div>
                 </div>
                 {(professional.idDocumentUrl || professional.verificationSelfieUrl) && (
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-                    {professional.idDocumentUrl && (
-                      <a href={professional.idDocumentUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '0.5rem 1rem', background: 'rgba(102,126,234,0.2)', border: '1px solid #667eea', borderRadius: '8px', color: '#667eea', fontSize: '0.9rem', textDecoration: 'none' }}>
-                        View ID Document
-                      </a>
-                    )}
-                    {professional.verificationSelfieUrl && (
-                      <a href={professional.verificationSelfieUrl} target="_blank" rel="noopener noreferrer" style={{ padding: '0.5rem 1rem', background: 'rgba(102,126,234,0.2)', border: '1px solid #667eea', borderRadius: '8px', color: '#667eea', fontSize: '0.9rem', textDecoration: 'none' }}>
-                        View Selfie
-                      </a>
-                    )}
-                  </div>
+                  <IdentityDocLinks
+                    idDocumentUrl={professional.idDocumentUrl}
+                    verificationSelfieUrl={professional.verificationSelfieUrl}
+                  />
                 )}
               </div>
               <div style={styles.section}>

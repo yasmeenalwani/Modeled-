@@ -5,27 +5,24 @@ import PartnerDetailModal from '../components/PartnerDetailModal';
 import GalleryTagFilter from '../../components/GalleryTagFilter';
 import { PARTNER_TAG_CATEGORIES, partnerToTags, partnerMatchesTags } from '../../utils/partnerTags';
 import { shouldUseMockData } from '../../utils/mockDataService';
+import { normalizeApprovalStatus } from '../utils/approvalStatus';
+import { PARTNER_DRAFTS } from '../data/partnerDrafts';
+import { mapPartnerToCard, mapDraftToCard, resolvePartnerForModal } from '../../utils/partnerProfile';
+
+const APPROVAL_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'pending_review', label: 'Pending' },
+  { id: 'manual_review', label: 'Manual review' },
+  { id: 'needs_changes', label: 'Needs changes' },
+  { id: 'approved', label: 'Approved' },
+];
 
 let client;
 try {
   if (!shouldUseMockData()) client = generateClient();
 } catch (e) { client = null; }
 
-function mapPartnerToCard(partner) {
-  if (!partner) return null;
-  return {
-    id: partner.id,
-    name: partner.businessName || 'Unknown Business',
-    type: partner.businessType || 'partner',
-    address: [partner.address, partner.city, partner.state, partner.zip].filter(Boolean).join(', ') || 'Not provided',
-    stylists: partner.numberOfProfessionals || 0,
-    bookings: 0,
-    rating: null,
-    status: partner.status || 'pending',
-    locationCount: partner.numberOfLocations || 1,
-    _db: partner,
-  };
-}
+const draftCards = PARTNER_DRAFTS.map(mapDraftToCard).filter(Boolean);
 
 const styles = {
   container: { padding: '2rem' },
@@ -138,6 +135,34 @@ const styles = {
     background: 'rgba(76,175,80,0.2)',
     color: '#4caf50',
   },
+  draftBadge: {
+    display: 'inline-block',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '20px',
+    fontSize: '0.7rem',
+    fontWeight: '600',
+    background: 'rgba(102,126,234,0.25)',
+    color: '#9aaeff',
+    marginLeft: '0.35rem',
+  },
+  locationChip: {
+    fontSize: '0.75rem',
+    color: 'rgba(255,255,255,0.55)',
+    marginBottom: '0.35rem',
+  },
+  tagRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.35rem',
+    marginTop: '0.5rem',
+  },
+  tagChip: {
+    padding: '0.2rem 0.55rem',
+    borderRadius: '12px',
+    fontSize: '0.68rem',
+    border: '1px solid rgba(255,255,255,0.15)',
+    color: 'rgba(255,255,255,0.7)',
+  },
 };
 
 const mockSalons = [
@@ -171,22 +196,58 @@ export default function SalonsPage() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
+
+  const refreshPartners = async () => {
+    if (shouldUseMockData() || !client?.models?.Partner) {
+      setPartners([...draftCards, ...mockSalons.map((s) => ({ ...s, _db: null }))]);
+      return;
+    }
+    try {
+      const { data, errors } = await client.models.Partner.list({ limit: 200 });
+      if (!errors?.length && data) {
+        const dbCards = (data || []).map(mapPartnerToCard);
+        const dbSlugs = new Set(dbCards.map((c) => c.slug).filter(Boolean));
+        const draftsNotInDb = draftCards.filter((d) => !dbSlugs.has(d.slug));
+        setPartners([...draftsNotInDb, ...dbCards]);
+      }
+    } catch (err) {
+      console.error('Refresh partners failed:', err);
+    }
+  };
+
+  const updatePartnerStatus = async (partner, nextStatus, e) => {
+    e?.stopPropagation?.();
+    const partnerId = partner?._db?.id || partner?.id;
+    if (!partnerId || shouldUseMockData() || !client?.models?.Partner) return;
+    try {
+      await client.models.Partner.update({ id: partnerId, status: nextStatus });
+      await refreshPartners();
+    } catch (err) {
+      console.error('Failed to update partner status:', err);
+      alert(`Could not update status: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
     async function loadPartners() {
       if (shouldUseMockData() || !client?.models?.Partner) {
-        setPartners(mockSalons.map((s) => ({ ...s, _db: null })));
+        const mock = mockSalons.map((s) => ({ ...s, _db: null }));
+        if (mounted) setPartners([...draftCards, ...mock]);
         setLoading(false);
         return;
       }
       try {
         const { data, errors } = await client.models.Partner.list({ limit: 200 });
         if (errors?.length) throw new Error(errors[0]?.message);
-        if (mounted) setPartners((data || []).map(mapPartnerToCard));
+        const dbCards = (data || []).map(mapPartnerToCard);
+        const dbSlugs = new Set(dbCards.map((c) => c.slug).filter(Boolean));
+        const draftsNotInDb = draftCards.filter((d) => !dbSlugs.has(d.slug));
+        if (mounted) setPartners([...draftsNotInDb, ...dbCards]);
       } catch (err) {
         console.error('Failed to load partners, using mock:', err);
-        if (mounted) setPartners(mockSalons.map((s) => ({ ...s, _db: null })));
+        if (mounted) setPartners([...draftCards, ...mockSalons.map((s) => ({ ...s, _db: null }))]);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -206,8 +267,13 @@ export default function SalonsPage() {
     
     // Tag filter
     const matchesTags = partnerMatchesTags(salon, selectedTags);
-    
-    return matchesSearch && matchesTags;
+    const normalizedStatus = normalizeApprovalStatus(salon.status);
+    const matchesTab =
+      activeTab === 'all' ||
+      (activeTab === 'manual_review'
+        ? normalizedStatus === 'manual_review' || normalizedStatus === 'rejected'
+        : normalizedStatus === activeTab);
+    return matchesSearch && matchesTags && matchesTab;
   });
   
   // Convert salons to "photo-like" format for filter component
@@ -218,8 +284,8 @@ export default function SalonsPage() {
   
   const topPerformers = getTopPerformers(filteredSalons, 3);
   
-  const handlePartnerClick = (partner) => {
-    setSelectedPartner(partner);
+  const handlePartnerClick = (card) => {
+    setSelectedPartner(resolvePartnerForModal(card));
     setShowDetailModal(true);
   };
   
@@ -331,8 +397,29 @@ export default function SalonsPage() {
         </div>
       )}
 
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        {APPROVAL_FILTERS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              border: activeTab === tab.id ? '1px solid #e94560' : '1px solid rgba(255,255,255,0.1)',
+              background: activeTab === tab.id ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.05)',
+              color: activeTab === tab.id ? '#e94560' : 'rgba(255,255,255,0.6)',
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Results count */}
-      {(selectedTags.length > 0 || searchTerm) && (
+      {(selectedTags.length > 0 || searchTerm || activeTab !== 'all') && (
         <div style={{ 
           marginBottom: '1rem', 
           color: 'rgba(255,255,255,0.6)', 
@@ -343,30 +430,11 @@ export default function SalonsPage() {
       )}
 
       <div style={styles.grid}>
-        {filteredSalons.map(salon => {
-          // Convert mock salon to partner format
-          const partner = salon._db || {
-            id: String(salon.id),
-            businessName: salon.name,
-            contactName: salon.name,
-            email: `${salon.name.toLowerCase().replace(/\s+/g, '')}@example.com`,
-            phone: null,
-            address: salon.address,
-            city: 'NYC',
-            state: 'NY',
-            zip: null,
-            businessType: salon.type.toLowerCase(),
-            website: null,
-            instagramHandle: null,
-            status: salon.status,
-            adminNotes: null,
-          };
-          
-          return (
+        {filteredSalons.map(salon => (
             <div 
               key={salon.id} 
               style={{ ...styles.card, cursor: 'pointer' }}
-              onClick={() => handlePartnerClick(partner)}
+              onClick={() => handlePartnerClick(salon)}
               onMouseOver={(e) => {
                 e.currentTarget.style.transform = 'translateY(-4px)';
                 e.currentTarget.style.boxShadow = '0 8px 24px rgba(139,30,63,0.2)';
@@ -378,10 +446,65 @@ export default function SalonsPage() {
             >
             <div style={styles.cardImage}>🏢</div>
             <div style={styles.cardBody}>
-              <div style={styles.salonName}>{salon.name}</div>
+              <div style={styles.salonName}>
+                {salon.name}
+                {salon.isDraft && <span style={styles.draftBadge}>Draft · review</span>}
+              </div>
               <div style={styles.salonType}>{salon.type}</div>
+              {salon.locationLabel && <div style={styles.locationChip}>{salon.locationLabel}</div>}
               <div style={styles.salonInfo}>📍 {salon.address}</div>
-              <span style={styles.badge}>{salon.status}</span>
+              {salon.phone && <div style={styles.salonInfo}>📞 {salon.phone}</div>}
+              {salon.tags?.length > 0 && (
+                <div style={styles.tagRow}>
+                  {salon.tags.slice(0, 4).map((tag) => (
+                    <span key={tag} style={styles.tagChip}>{tag.replace(/_/g, ' ')}</span>
+                  ))}
+                </div>
+              )}
+              <span style={{
+                ...styles.badge,
+                ...(normalizeApprovalStatus(salon.status) === 'approved' || salon.status === 'active'
+                  ? {}
+                  : { background: 'rgba(255,193,7,0.2)', color: '#ffc107' }),
+              }}>
+                {normalizeApprovalStatus(salon.status).replace('_', ' ')}
+              </span>
+
+              <div
+                style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem', flexWrap: 'wrap' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'rgba(76,175,80,0.25)',
+                    color: '#4caf50',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => updatePartnerStatus(salon, 'active', e)}
+                >
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(255,193,7,0.4)',
+                    background: 'transparent',
+                    color: '#ffc107',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => updatePartnerStatus(salon, 'manual_review', e)}
+                >
+                  Review
+                </button>
+              </div>
               
               <div style={styles.stats}>
                 <div style={styles.stat}>
@@ -399,8 +522,7 @@ export default function SalonsPage() {
               </div>
             </div>
           </div>
-          );
-        })}
+        ))}
       </div>
       
       {/* CRM Detail Modal */}
@@ -408,8 +530,8 @@ export default function SalonsPage() {
         <PartnerDetailModal
           partner={selectedPartner}
           onClose={handleCloseModal}
-          onUpdate={() => {
-            window.location.reload();
+          onUpdate={async () => {
+            await refreshPartners();
             handleCloseModal();
           }}
         />

@@ -5,6 +5,12 @@ import ProfessionalDetailModal from '../components/ProfessionalDetailModal';
 import GalleryTagFilter from '../../components/GalleryTagFilter';
 import { PROFESSIONAL_TAG_CATEGORIES, professionalToTags, professionalMatchesTags } from '../../utils/professionalTags';
 import { shouldUseMockData } from '../../utils/mockDataService';
+import { PROFESSIONAL_DRAFTS } from '../data/professionalDrafts';
+import {
+  mapProfessionalToCard,
+  mapProfessionalDraftToCard,
+  resolveProfessionalForModal,
+} from '../../utils/professionalProfile';
 
 const LOCAL_PRO_SUBMISSIONS_KEY = 'modeled_local_professional_submissions';
 const APPROVAL_FILTERS = [
@@ -28,39 +34,22 @@ try {
   if (!shouldUseMockData()) client = generateClient();
 } catch (e) { client = null; }
 
-/** Map Professional from DB to card format (compatible with mockProfessionals) */
-function mapProfessionalToCard(pro) {
-  if (!pro) return null;
-  const fallbackNameFromEmail = pro.email ? pro.email.split('@')[0] : '';
-  const name = `${pro.firstName || ''} ${pro.lastName || ''}`.trim() || fallbackNameFromEmail || 'Unknown';
-  const salonDisplay =
-    pro.salonName ||
-    [pro.salonCity, pro.salonState].filter(Boolean).join(', ') ||
-    pro.locationZip ||
-    '—';
-  const levelDisplay = (() => {
-    const raw = (pro.experienceLevel || '').toLowerCase();
-    if (!raw) return '—';
-    if (raw === 'student') return 'Student';
-    if (raw === 'apprentice') return 'Apprentice';
-    if (raw === 'junior') return 'Junior';
-    if (raw === 'senior') return 'Senior';
-    return raw.charAt(0).toUpperCase() + raw.slice(1);
-  })();
-  return {
-    id: pro.id,
-    name,
-    salon: salonDisplay,
-    specialties: pro.specialties || [],
-    level: levelDisplay,
-    status: pro.status || 'pending',
-    requests: 0,
-    bookings: 0,
-    rating: null,
-    trainingProgress: {},
-    // Keep DB fields for modal
-    _db: pro,
-  };
+const professionalDraftCards = PROFESSIONAL_DRAFTS.map(mapProfessionalDraftToCard).filter(Boolean);
+
+function mergeProfessionalCards(dbRecords, localMirrors = []) {
+  const dbCards = (dbRecords || []).map(mapProfessionalToCard).filter(Boolean);
+  const seen = new Set(
+    dbCards.map((c) => c.slug || c.name?.toLowerCase()).filter(Boolean)
+  );
+  const draftsNotInDb = professionalDraftCards.filter((d) => {
+    const key = d.slug || d.name?.toLowerCase();
+    return key && !seen.has(key);
+  });
+  const mirrorCards = (localMirrors || [])
+    .map(mapProfessionalToCard)
+    .filter(Boolean)
+    .filter((c) => !seen.has(c.id) && !professionalDraftCards.some((d) => d.name === c.name));
+  return [...draftsNotInDb, ...mirrorCards, ...dbCards];
 }
 
 const styles = {
@@ -381,8 +370,6 @@ export default function ProfessionalsPage() {
       return merged;
     };
 
-    const toCards = (records) => (records || []).map((p) => mapProfessionalToCard(p)).filter(Boolean);
-
     async function loadProfessionals() {
       if (shouldUseMockData() || !client?.models?.Professional) {
         const mockAsRaw = mockProfessionals.map((p, idx) => ({
@@ -397,7 +384,7 @@ export default function ProfessionalsPage() {
           _fromMock: true,
         }));
         const merged = mergeWithLocalMirrors(mockAsRaw);
-        setProfessionals(toCards(merged));
+        setProfessionals(mergeProfessionalCards(merged));
         setLoading(false);
         return;
       }
@@ -406,7 +393,7 @@ export default function ProfessionalsPage() {
         if (errors?.length) throw new Error(errors[0]?.message);
         if (mounted) {
           const merged = mergeWithLocalMirrors(data || []);
-          setProfessionals(toCards(merged));
+          setProfessionals(mergeProfessionalCards(merged));
         }
       } catch (err) {
         console.error('Failed to load professionals, using mock:', err);
@@ -423,7 +410,7 @@ export default function ProfessionalsPage() {
             _fromMock: true,
           }));
           const merged = mergeWithLocalMirrors(mockAsRaw);
-          setProfessionals(toCards(merged));
+          setProfessionals(mergeProfessionalCards(merged));
         }
       } finally {
         if (mounted) setLoading(false);
@@ -454,7 +441,7 @@ export default function ProfessionalsPage() {
           seen.add(key);
           merged.unshift(p);
         });
-        setProfessionals(merged.map((p) => mapProfessionalToCard(p)).filter(Boolean));
+        setProfessionals(mergeProfessionalCards(merged));
       }
     } catch (err) {
       console.error('Refresh failed:', err);
@@ -478,23 +465,7 @@ export default function ProfessionalsPage() {
   };
 
   const handleProfessionalClick = (professional) => {
-    // Use _db (real Professional) when available, else build from mock format
-    const proData = professional._db || {
-      id: professional.id.toString(),
-      firstName: professional.name?.split(' ')[0] || '',
-      lastName: professional.name?.split(' ').slice(1).join(' ') || '',
-      email: professional.email || `${(professional.name || '').toLowerCase().replace(/\s+/g, '')}@example.com`,
-      phone: professional.phone || null,
-      specialties: professional.specialties || [],
-      experienceLevel: (professional.level || '').toLowerCase(),
-      licenseNumber: null,
-      salonName: professional.salon || '',
-      salonAddress: null,
-      instagramHandle: null,
-      status: professional.status || 'pending',
-      adminNotes: null,
-    };
-    setSelectedProfessional(proData);
+    setSelectedProfessional(resolveProfessionalForModal(professional));
     setShowDetailModal(true);
   };
 
@@ -503,7 +474,11 @@ export default function ProfessionalsPage() {
     e.stopPropagation();
     const professionalId = professional?._db?.id || professional?.id;
     if (!professionalId) return;
-    navigate(`/admin/requests?create=1&professionalId=${encodeURIComponent(professionalId)}`);
+    const slug = professional?._draft?.slug || professional?.slug;
+    const query = slug
+      ? `create=1&professionalSlug=${encodeURIComponent(slug)}`
+      : `create=1&professionalId=${encodeURIComponent(professionalId)}`;
+    navigate(`/admin/requests?${query}`);
   };
   
   const handleCloseModal = () => {
@@ -715,8 +690,26 @@ export default function ProfessionalsPage() {
             <div style={styles.cardHeader}>
               <div style={styles.avatar}>{pro.name?.charAt(0) || '?'}</div>
               <div>
-                <div style={styles.name}>{pro.name}</div>
-                <div style={styles.salon}>{pro.salon} • {pro.level}</div>
+                <div style={styles.name}>
+                  {pro.name}
+                  {pro.isDraft && (
+                    <span style={{
+                      marginLeft: '0.4rem',
+                      fontSize: '0.65rem',
+                      padding: '0.15rem 0.45rem',
+                      borderRadius: '8px',
+                      background: 'rgba(102,126,234,0.25)',
+                      color: '#9aaeff',
+                      fontWeight: 600,
+                    }}>
+                      Draft
+                    </span>
+                  )}
+                </div>
+                <div style={styles.salon}>
+                  {pro.salon} • {pro.level}
+                  {pro.partnerName ? ` · ${pro.partnerName}` : ''}
+                </div>
               </div>
             </div>
 

@@ -191,7 +191,7 @@ const navItems = [
   {
     section: 'Onboarding & Training',
     items: [
-      { path: '/admin/onboarding', icon: '', label: 'Pro Onboarding' },
+      { path: '/admin/onboarding', icon: '', label: 'Review Queue' },
       { path: '/admin/training', icon: '', label: 'Training Program' },
     ],
   },

@@ -7,13 +7,16 @@ import GuidedPhotoCapture from '../components/GuidedPhotoCapture';
 import IdentityVerification from '../components/IdentityVerification';
 import { submitPhotosForAnalysis } from '../utils/photoSubmission';
 import { shouldUseMockData } from '../utils/mockDataService';
-import { isLocalDevHost } from '../utils/isLocalDevHost';
+import { getAuthenticatorUserId } from '../utils/authUtils';
+import { normalizeDeployedProfileStatus } from '../utils/deployedApiEnums';
+import { mapServicePreferencesToOpenFlags } from '../utils/modelOnboardPayload';
 import {
   ensureEmailVerificationCodeSent,
   confirmEmailVerificationCode,
   getCognitoEmailState,
   formatVerificationError,
 } from '../utils/cognitoAttributeVerification';
+import { allowOnboardingVerificationBypass } from '../utils/verificationBypass';
 
 const client = generateClient();
 
@@ -1381,8 +1384,7 @@ function StepEmailVerification({ data, setData }) {
   const [verified, setVerified] = useState(data?.emailVerified || data?.emailVerificationSkipped || false);
   const [cognitoEmail, setCognitoEmail] = useState(null);
 
-  const useMock = shouldUseMockData();
-  const allowTestBypass = useMock || isLocalDevHost();
+  const allowTestBypass = allowOnboardingVerificationBypass();
 
   useEffect(() => {
     if (allowTestBypass || verified) return;
@@ -1666,7 +1668,7 @@ function StepPhoneVerification({ data, setData }) {
   const [error, setError] = useState(null);
   const [codeSent, setCodeSent] = useState(data?.phoneVerified || false);
   const [verified, setVerified] = useState(data?.phoneVerified || data?.phoneVerificationSkipped || false);
-  const allowTestBypass = shouldUseMockData() || isLocalDevHost();
+  const allowTestBypass = allowOnboardingVerificationBypass();
 
   const handleSendCode = async () => {
     if (!data?.phone || data.phone.replace(/[^\d]/g, '').length !== 10) {
@@ -2373,8 +2375,17 @@ export default function ModelOnboard() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const userId = user?.userId || user?.username || user?.signInDetails?.loginId;
-      
+      if (shouldUseMockData()) {
+        alert(
+          'Photo upload and profile save need the real API.\n\n' +
+            'Set VITE_USE_MOCK_DATA=false in .env.local, restart the dev server, then try again.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const userId = getAuthenticatorUserId(user);
+
       if (!userId) {
         throw new Error('User not authenticated');
       }
@@ -2467,6 +2478,12 @@ export default function ModelOnboard() {
       const photoUrls = keysFromUpload.length > 0 ? keysFromUpload : legacyUrls;
       const headshotUrl = photoUrls.length > 0 ? photoUrls[0] : null;
       
+      const openFlags = mapServicePreferencesToOpenFlags(formData.servicePreferences);
+      const profileStatus = normalizeDeployedProfileStatus(
+        import.meta.env.DEV ? 'active' : 'pending',
+        'pending'
+      );
+
       const profileData = {
         userId: userId,
         email: formData.email || user?.signInDetails?.loginId || '',
@@ -2478,8 +2495,9 @@ export default function ModelOnboard() {
         travelRadius: null,
         photoUrls: photoUrls,
         headshotUrl: headshotUrl,
-        status: 'pending',
+        status: profileStatus,
         photoAnalysisStatus: 'pending',
+        ...openFlags,
         hairLengthSimple: formData.hairLengthSimple || null,
         hairColorSimple: formData.hairColorSimple || null,
         hairTextureSimple: formData.hairTextureSimple || null,
@@ -2659,7 +2677,7 @@ export default function ModelOnboard() {
               <CurrentStepComponent 
                 data={formData || {}} 
                 setData={setFormData}
-                userId={user?.userId || user?.username || user?.signInDetails?.loginId}
+                userId={getAuthenticatorUserId(user)}
                 uploadEntityId={storageEntityId}
                 onFieldComplete={handleFieldComplete}
                 currentFieldIndex={currentFieldIndex || 0}

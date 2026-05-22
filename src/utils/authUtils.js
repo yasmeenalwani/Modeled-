@@ -216,10 +216,20 @@ export async function verifySession() {
 export async function getCurrentUserId() {
   try {
     const user = await getCurrentUser();
-    return user.userId;
+    return user.userId || user.username || null;
   } catch (error) {
     console.error('Error getting current user ID:', error);
     return null;
   }
+}
+
+/**
+ * Cognito sub for ModelProfile.userId — use on create AND list (never email).
+ * @param {object|null|undefined} user - useAuthenticator().user
+ * @returns {string|null}
+ */
+export function getAuthenticatorUserId(user) {
+  if (!user) return null;
+  return user.userId || user.username || user.userSub || null;
 }
 

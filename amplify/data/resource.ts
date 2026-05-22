@@ -171,8 +171,8 @@ const schema = a.schema({
       photoUrls: a.string().array(),
       headshotUrl: a.string(),
       
-      // Profile status
-      status: a.enum(['pending', 'approved', 'active', 'inactive']),
+      // Profile status (admin review workflow)
+      status: a.enum(['pending', 'approved', 'active', 'inactive', 'manual_review', 'needs_changes', 'rejected']),
       
       // Tags for matching (populated by quizzes later)
       tags: a.string().array(),
@@ -288,7 +288,7 @@ const schema = a.schema({
       instagramHandle: a.string(),
       
       // Status
-      status: a.enum(['pending', 'approved', 'active', 'inactive']),
+      status: a.enum(['pending', 'approved', 'active', 'inactive', 'manual_review', 'needs_changes', 'rejected']),
       
       // Identity Verification (AWS Rekognition)
       identityVerified: a.boolean().default(false),
@@ -332,14 +332,19 @@ const schema = a.schema({
       contactName: a.string().required(),
       phone: a.string().required(), // Now required
       
-      // Location
+      // Location (primary / rollup — use locationSites for multi-location)
       address: a.string(),
       city: a.string(),
       state: a.string(),
       zip: a.string(),
+      locationSites: a.json(), // [{ id, name, neighborhood, address, city, state, zip, phone, hours, isPrimary, seasonal? }]
+      slug: a.string(), // URL-safe id, e.g. roman-k-salon
+      tags: a.string().array(), // luxury, multi_location, med_spa, etc.
+      sourceUrl: a.string(), // Website used for admin import
+      brandSummary: a.string(), // Short public-facing description
       
       // Business info
-      businessType: a.enum(['salon', 'studio', 'school', 'spa']),
+      businessType: a.enum(['salon', 'studio', 'school', 'spa', 'med_spa', 'barbershop', 'other']),
       website: a.string(), // Optional for inquiry
       howDidYouHear: a.string(),
       howDidYouHearOther: a.string(),
@@ -348,8 +353,9 @@ const schema = a.schema({
       numberOfLocations: a.string(), // Range: "1", "2-5", "6-10", "11-20", "21+"
       numberOfProfessionals: a.integer(), // Number of practicing professionals
       
-      // Services with prices (JSON: [{ name: "Haircut", price: 50 }, ...])
-      servicesList: a.json(), // Array of { name: string, price: number }
+      // Services with prices (JSON: [{ name, category, priceMin?, priceMax?, priceLabel?, highlights? }])
+      servicesList: a.json(),
+      pricingNote: a.string(), // e.g. "Pricing varies by location; see romanksalon.com/pricing"
       
       // Photos
       selfPhotoUrls: a.string().array(), // Photos of contact person for verification
@@ -367,7 +373,7 @@ const schema = a.schema({
       termsAcceptedAt: a.datetime(),
       
       // Status
-      status: a.enum(['pending', 'approved', 'active', 'inactive']),
+      status: a.enum(['pending', 'approved', 'active', 'inactive', 'manual_review', 'needs_changes', 'rejected']),
       
       // Identity Verification (AWS Rekognition)
       identityVerified: a.boolean().default(false),

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { getUrl, list } from 'aws-amplify/storage';
 import { mockModels, getTopPerformers } from '../../matching';
 import { shouldUseMockData } from '../../utils/mockDataService';
+import { resolveModelCoverPhoto } from '../../utils/modelPhotoResolver';
+import { buildModelCardTags } from '../../utils/modelDisplayTags';
 import ModelDetailModal from '../components/ModelDetailModal';
+import ModelCoverImage from '../components/ModelCoverImage';
 import GalleryTagFilter from '../../components/GalleryTagFilter';
 
 let client;
@@ -80,6 +82,8 @@ function mapModelProfileToUI(profile) {
     firstName: profile.firstName || '',
     lastName: profile.lastName || '',
     email: profile.email || '',
+    phone: profile.phone || '',
+    locationZip: profile.locationZip || '',
     hairColor: profile.hairColorSimple || profile.hairColor || '—',
     hairLength: profile.hairLengthSimple || profile.hairLength || '—',
     hairTexture: profile.hairTextureSimple || profile.hairTexture || '—',
@@ -115,76 +119,18 @@ function mapModelProfileToUI(profile) {
     favoriteService: profile.favoriteService,
     modelingFocus: favoriteService?.modelingFocus || '',
     mediaTraining: favoriteService?.mediaTraining || {},
-    primaryPhotoUrl:
+    coverPhotoRef:
       profile.headshotUrl ||
       (Array.isArray(profile.photoUrls) && profile.photoUrls.length > 0 ? profile.photoUrls[0] : null),
+    primaryPhotoUrl: null,
+    displayTags: [],
   };
 }
 
-async function resolveUrlFromPath(path) {
-  if (!path || typeof path !== 'string') return null;
-  try {
-    const result = await getUrl({ path });
-    return result?.url?.toString() || null;
-  } catch {
-    return null;
-  }
-}
-
-async function resolvePrimaryPhoto(profile, mappedModel) {
-  const photoMetadata = safeParseJson(profile?.photoMetadata, {});
-  const isHttpUrl = (s) => typeof s === 'string' && /^https?:\/\//i.test(s);
-  const pathLikeFromUrls = [
-    ...(Array.isArray(profile?.photoUrls) ? profile.photoUrls : []).filter((s) => typeof s === 'string' && !isHttpUrl(s)),
-    profile?.headshotUrl && !isHttpUrl(profile.headshotUrl) ? profile.headshotUrl : null,
-  ].filter(Boolean);
-  const keyCandidates = [
-    ...pathLikeFromUrls,
-    ...(Array.isArray(profile?.photoKeys) ? profile.photoKeys : []),
-    ...Object.values(photoMetadata || {}).map((entry) => entry?.key),
-  ].filter(Boolean);
-
-  for (const rawPath of keyCandidates) {
-    const variants = [rawPath];
-    if (!String(rawPath).startsWith('public/')) {
-      variants.push(`public/${rawPath}`);
-    }
-    for (const path of variants) {
-      const resolved = await resolveUrlFromPath(path);
-      if (resolved) return resolved;
-    }
-  }
-
-  const directCandidates = [
-    mappedModel?.primaryPhotoUrl,
-    profile?.headshotUrl,
-    ...(Array.isArray(profile?.photoUrls) ? profile.photoUrls : []),
-  ].filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url));
-  if (directCandidates.length > 0) {
-    return directCandidates[0];
-  }
-
-  if (profile?.userId) {
-    const prefixes = [
-      `profile-photos/models/${profile.userId}/`,
-      `public/profile-photos/models/${profile.userId}/`,
-      `identity-verification/models/${profile.userId}/`,
-      `public/identity-verification/models/${profile.userId}/`,
-    ];
-    for (const prefix of prefixes) {
-      try {
-        const listed = await list({ path: prefix });
-        const firstItem = (listed?.items || []).find((item) => !!item?.path);
-        if (!firstItem?.path) continue;
-        const resolved = await resolveUrlFromPath(firstItem.path);
-        if (resolved) return resolved;
-      } catch {
-        // Continue trying fallback prefixes.
-      }
-    }
-  }
-
-  return null;
+function modelReadyForMatching(model) {
+  const status = String(model?.status || '').toLowerCase();
+  const approved = ['active', 'approved'].includes(status);
+  return approved && !!model?.email && !!model?.phone;
 }
 
 const APPROVAL_FILTERS = [
@@ -380,6 +326,18 @@ const styles = {
     color: 'rgba(255,255,255,0.82)',
     background: 'rgba(255,255,255,0.04)',
   },
+  contactMeta: {
+    fontSize: '0.78rem',
+    color: 'rgba(255,255,255,0.5)',
+    marginBottom: '0.5rem',
+    lineHeight: 1.45,
+  },
+  matchReady: {
+    fontSize: '0.7rem',
+    color: '#9ae2a3',
+    marginBottom: '0.45rem',
+    fontWeight: '600',
+  },
   badge: {
     display: 'inline-block',
     padding: '0.25rem 0.75rem',
@@ -560,10 +518,11 @@ export default function ModelsPage() {
         const withPhotos = await Promise.all(
           mapped.map(async (model) => {
             const profile = (data || []).find((p) => p?.id === model.id);
-            const primaryPhotoUrl = await resolvePrimaryPhoto(profile, model);
+            const primaryPhotoUrl = await resolveModelCoverPhoto(profile);
             return {
               ...model,
-              primaryPhotoUrl: primaryPhotoUrl || model.primaryPhotoUrl || null,
+              primaryPhotoUrl,
+              displayTags: buildModelCardTags(model),
             };
           })
         );
@@ -588,10 +547,11 @@ export default function ModelsPage() {
         const withPhotos = await Promise.all(
           mapped.map(async (model) => {
             const profile = data.find((p) => p?.id === model.id);
-            const primaryPhotoUrl = await resolvePrimaryPhoto(profile, model);
+            const primaryPhotoUrl = await resolveModelCoverPhoto(profile);
             return {
               ...model,
-              primaryPhotoUrl: primaryPhotoUrl || model.primaryPhotoUrl || null,
+              primaryPhotoUrl,
+              displayTags: buildModelCardTags(model),
             };
           })
         );
@@ -819,17 +779,22 @@ export default function ModelsPage() {
             }}
           >
             <div style={styles.coverFrame}>
-              {model.primaryPhotoUrl ? (
-                <img
-                  src={model.primaryPhotoUrl}
-                  alt={`${model.firstName || 'Model'} cover`}
-                  style={styles.avatarImage}
-                />
-              ) : (
-                <div style={styles.coverFallback}>{model.firstName?.charAt(0) || '?'}</div>
-              )}
+              <ModelCoverImage
+                photoRef={model.primaryPhotoUrl || model.coverPhotoRef}
+                name={`${model.firstName} ${model.lastName}`}
+                style={styles.avatarImage}
+                alt={`${model.firstName || 'Model'} cover`}
+              />
             </div>
-            <div style={{ ...styles.name, marginBottom: '0.65rem' }}>{model.firstName} {model.lastName}</div>
+            <div style={{ ...styles.name, marginBottom: '0.35rem' }}>{model.firstName} {model.lastName}</div>
+            <div style={styles.contactMeta}>
+              {model.email && <div>{model.email}</div>}
+              {model.phone && <div>{model.phone}</div>}
+              {model.locationZip && <div>ZIP {model.locationZip}</div>}
+            </div>
+            {modelReadyForMatching(model) && (
+              <div style={styles.matchReady}>✓ Ready for matching & notifications</div>
+            )}
             <div style={styles.focusBadge}>
               {model.modelingFocus === 'editorial'
                 ? 'Editorial'
@@ -841,14 +806,11 @@ export default function ModelsPage() {
             </div>
 
             <div style={styles.featuresRow}>
-              {[model.hairLength, model.hairColor, model.hairTexture]
-                .filter((feature) => typeof feature === 'string' && feature.trim() && feature !== '—')
-                .slice(0, 3)
-                .map((feature) => (
-                  <span key={feature} style={styles.featureChip}>
-                    {String(feature).replace(/_/g, ' ')}
-                  </span>
-                ))}
+              {(model.displayTags?.length ? model.displayTags : buildModelCardTags(model)).map((feature) => (
+                <span key={feature} style={styles.featureChip}>
+                  {feature}
+                </span>
+              ))}
             </div>
           </div>
         ))}
