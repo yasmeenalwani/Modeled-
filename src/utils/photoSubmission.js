@@ -190,6 +190,48 @@ export async function updateModelProfileWithPhotos(userId, uploadResults) {
   }
 }
 
+// ============ DRAFT PROFILE (so photo-analysis can attach) ============
+
+/**
+ * Ensure a ModelProfile row exists BEFORE photos are uploaded, so the S3
+ * onUpload trigger (photo-analysis) can find this profile and attach attributes.
+ */
+export async function ensureModelProfileDraft(subUserId, storageIdentityId, basics = {}) {
+  if (shouldUseMockData()) return null;
+  const modelProfile = client?.models?.ModelProfile;
+  if (!subUserId || !modelProfile?.list || !modelProfile?.create) return null;
+  try {
+    const { data: existing } = await modelProfile.list({
+      filter: { userId: { eq: subUserId } },
+      limit: 1,
+    });
+    if (existing?.[0]?.id) {
+      if (storageIdentityId && !existing[0].storageIdentityId) {
+        await modelProfile.update({ id: existing[0].id, storageIdentityId });
+      }
+      return existing[0];
+    }
+    if (!basics.firstName || !basics.lastName || !basics.email || !basics.phone) {
+      return null;
+    }
+    const { data: created } = await modelProfile.create({
+      userId: subUserId,
+      storageIdentityId: storageIdentityId || null,
+      email: basics.email,
+      firstName: basics.firstName,
+      lastName: basics.lastName,
+      phone: basics.phone,
+      locationZip: basics.locationZip || null,
+      status: 'pending',
+      photoAnalysisStatus: 'pending',
+    });
+    return created || null;
+  } catch (err) {
+    console.warn('ensureModelProfileDraft skipped (non-fatal):', err?.message || err);
+    return null;
+  }
+}
+
 // ============ SUBMISSION FLOW ============
 
 /**

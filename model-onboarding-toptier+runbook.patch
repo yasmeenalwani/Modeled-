@@ -1,0 +1,745 @@
+From f352fe07e442574030eeb5359986a9b2aa5c2704 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 7 Jun 2026 18:08:19 +0000
+Subject: [PATCH 1/2] Model onboarding: remove self-selects, enforce age 18+ &
+ gov ID, fix Rekognition linkage
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Top-tier pass on model onboarding per demo requirements.
+
+Removed ALL self-select attribute inputs:
+- Deleted the "Confirm your look" dropdowns and the "Quick features
+  (self-selected)" hair length/color/texture selects in the Modeling-path step.
+- Replaced with a read-only "AI vision analysis" step: attributes are detected
+  from photos via Rekognition + the Modeled hair/beauty engine (shows detected
+  values when present, otherwise an "analyzing" state).
+
+Age verification (18+): DOB now required in Basic Info and enforced both on
+step advance and at submit (isAdult/ageFromBirthday helpers). Under-18 or
+missing DOB cannot proceed. ageRange still derived for matching.
+
+Gov ID verification: now required to submit (verified/manual_review) unless
+explicitly bypassed for dev/test (allowOnboardingVerificationBypass) — grouped
+with email/phone verification enforcement.
+
+Fixed the Rekognition linkage bug (why auto-attributes never populated):
+- Photos are stored under the Cognito identity-pool id, but ModelProfile is
+  keyed by Cognito sub, so photo-analysis could never find the profile.
+- Added ModelProfile.storageIdentityId; onboarding now (a) creates a profile
+  draft BEFORE photo upload so the S3 trigger has a target, and (b) sets
+  storageIdentityId on the profile.
+- photo-analysis Lambda now matches a profile by userId (sub) OR
+  storageIdentityId, so uploads link correctly.
+
+NOTE: the Rekognition/linkage changes require an Amplify deploy + Bedrock model
+access to take effect and have not been runtime-tested from this environment.
+
+Verified here: backend tsc clean, Vite build passes, 42/42 matching tests green.
+
+https://claude.ai/code/session_0191zcDc6b5V3sntfdRfuvg2
+---
+ amplify/data/resource.ts                    |   3 +-
+ amplify/functions/photo-analysis/handler.ts |   4 +-
+ src/pages/ModelOnboard.jsx                  | 346 +++++---------------
+ src/utils/modelOnboardPayload.js            |  22 +-
+ src/utils/photoSubmission.js                |  50 +++
+ 5 files changed, 161 insertions(+), 264 deletions(-)
+
+diff --git a/amplify/data/resource.ts b/amplify/data/resource.ts
+index ccbd527..339b9df 100644
+--- a/amplify/data/resource.ts
++++ b/amplify/data/resource.ts
+@@ -26,7 +26,8 @@ const schema = a.schema({
+   ModelProfile: a
+     .model({
+       // Basic Info
+-      userId: a.string().required(),
++      userId: a.string().required(), // Cognito sub
++      storageIdentityId: a.string(), // Cognito identity-pool id (S3 photo path key) — lets photo-analysis link uploads to this profile
+       email: a.string().required(),
+       firstName: a.string().required(),
+       lastName: a.string().required(),
+diff --git a/amplify/functions/photo-analysis/handler.ts b/amplify/functions/photo-analysis/handler.ts
+index 87dcea1..0d19e53 100644
+--- a/amplify/functions/photo-analysis/handler.ts
++++ b/amplify/functions/photo-analysis/handler.ts
+@@ -318,7 +318,9 @@ async function updateModelProfile(
+   const client = await getDataClient();
+ 
+   const { data: profiles } = await client.models.ModelProfile.list({
+-    filter: { userId: { eq: userId } },
++    // The id parsed from the S3 path is the Cognito identity id; profiles are
++    // keyed by Cognito sub. Match either so analysis links to the right profile.
++    filter: { or: [{ userId: { eq: userId } }, { storageIdentityId: { eq: userId } }] },
+     limit: 1,
+   });
+   const profile = profiles?.[0];
+diff --git a/src/pages/ModelOnboard.jsx b/src/pages/ModelOnboard.jsx
+index 93fa10c..775a01c 100644
+--- a/src/pages/ModelOnboard.jsx
++++ b/src/pages/ModelOnboard.jsx
+@@ -5,11 +5,11 @@ import { generateClient } from 'aws-amplify/data';
+ import { sendUserAttributeVerificationCode, confirmUserAttribute, updateUserAttribute, fetchAuthSession } from 'aws-amplify/auth';
+ import GuidedPhotoCapture from '../components/GuidedPhotoCapture';
+ import IdentityVerification from '../components/IdentityVerification';
+-import { submitPhotosForAnalysis } from '../utils/photoSubmission';
++import { submitPhotosForAnalysis, ensureModelProfileDraft } from '../utils/photoSubmission';
+ import { shouldUseMockData } from '../utils/mockDataService';
+ import { getAuthenticatorUserId } from '../utils/authUtils';
+ import { normalizeDeployedProfileStatus } from '../utils/deployedApiEnums';
+-import { mapServicePreferencesToOpenFlags, isValidDateString, ageRangeFromBirthday } from '../utils/modelOnboardPayload';
++import { mapServicePreferencesToOpenFlags, isValidDateString, ageRangeFromBirthday, isAdult } from '../utils/modelOnboardPayload';
+ import {
+   ensureEmailVerificationCodeSent,
+   confirmEmailVerificationCode,
+@@ -669,6 +669,15 @@ function StepPhotos({ data, setData, userId, uploadEntityId }) {
+         setUploadError('We could not establish a secure upload session. Please refresh the page and make sure you are signed in, then try again.');
+         return;
+       }
++      // Create the profile draft first so the S3 photo-analysis trigger can
++      // attach Rekognition/Bedrock attributes to it (links by storageIdentityId).
++      await ensureModelProfileDraft(userId, storageOwnerId, {
++        firstName: data.firstName,
++        lastName: data.lastName,
++        email: data.email,
++        phone: data.phone,
++        locationZip: data.locationZip,
++      });
+       const result = await submitPhotosForAnalysis(photoData, storageOwnerId);
+ 
+       if (result.success) {
+@@ -810,57 +819,8 @@ function StepPhotos({ data, setData, userId, uploadEntityId }) {
+   );
+ }
+ 
+-// Attribute options for photo validation (match ModelProfile schema & matching engine)
+-const HAIR_LENGTH_OPTIONS = [
+-  { value: '', label: 'Select...' },
+-  { value: 'short', label: 'Short (chin or above)' },
+-  { value: 'medium', label: 'Medium (shoulder length)' },
+-  { value: 'long', label: 'Long (past shoulders)' },
+-  { value: 'extra_long', label: 'Extra long (mid-back or longer)' },
+-];
+-const HAIR_COLOR_OPTIONS = [
+-  { value: '', label: 'Select...' },
+-  { value: 'black', label: 'Black' },
+-  { value: 'brown', label: 'Brown' },
+-  { value: 'blonde', label: 'Blonde' },
+-  { value: 'red', label: 'Red' },
+-  { value: 'gray', label: 'Gray' },
+-  { value: 'colored', label: 'Colored (highlights, fashion color, etc.)' },
+-];
+-const HAIR_TEXTURE_OPTIONS = [
+-  { value: '', label: 'Select...' },
+-  { value: 'straight', label: 'Straight' },
+-  { value: 'wavy', label: 'Wavy' },
+-  { value: 'curly', label: 'Curly' },
+-  { value: 'coily', label: 'Coily' },
+-];
+-const SKIN_TONE_OPTIONS = [
+-  { value: '', label: 'Select...' },
+-  { value: 'fair', label: 'Fair' },
+-  { value: 'light', label: 'Light' },
+-  { value: 'medium', label: 'Medium' },
+-  { value: 'olive', label: 'Olive' },
+-  { value: 'tan', label: 'Tan' },
+-  { value: 'brown', label: 'Brown' },
+-  { value: 'dark', label: 'Dark' },
+-];
+-const HAIR_CONDITION_OPTIONS = [
+-  { value: '', label: 'Select...' },
+-  { value: 'healthy', label: 'Healthy' },
+-  { value: 'color_treated', label: 'Color treated' },
+-  { value: 'damaged', label: 'Damaged' },
+-  { value: 'virgin', label: 'Virgin (never colored/chemically treated)' },
+-];
+-const EYE_COLOR_OPTIONS = [
+-  { value: '', label: 'Select...' },
+-  { value: 'brown', label: 'Brown' },
+-  { value: 'hazel', label: 'Hazel' },
+-  { value: 'green', label: 'Green' },
+-  { value: 'blue', label: 'Blue' },
+-  { value: 'gray', label: 'Gray' },
+-  { value: 'amber', label: 'Amber' },
+-  { value: 'other', label: 'Other' },
+-];
++// Self-select hair/skin/eye attribute options were removed — those attributes are
++// now detected automatically from photos via Rekognition + the Modeled hair/beauty engine.
+ const MODELING_FOCUS_OPTIONS = [
+   {
+     value: 'everyday',
+@@ -895,12 +855,6 @@ function StepModelingFocus({ data, setData }) {
+     saveProgress(next);
+   };
+ 
+-  const updateAttr = (key, value) => {
+-    const next = { ...data, [key]: value || null };
+-    setData(next);
+-    saveProgress(next);
+-  };
+-
+   return (
+     <div>
+       <h3 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', color: '#8B1E3F', fontFamily: '"Alike", "Georgia", serif' }}>
+@@ -969,65 +923,10 @@ function StepModelingFocus({ data, setData }) {
+         ))}
+       </div>
+ 
+-      <h4 style={{ fontSize: '1.05rem', marginTop: '1.4rem', marginBottom: '0.5rem', color: '#8B1E3F', fontFamily: '"Alike", "Georgia", serif' }}>
+-        Quick features (self-selected)
+-      </h4>
+-      <p style={{ color: '#5A3A2A', marginBottom: '0.9rem', fontSize: '0.9rem', fontFamily: '"Alike", "Georgia", serif' }}>
+-        Pick what is most accurate today. We combine this with photo analysis for matching.
++      <p style={{ color: '#5A3A2A', marginTop: '1.4rem', fontSize: '0.85rem', fontFamily: '"Alike", "Georgia", serif' }}>
++        No need to describe your hair or features — Modeled&apos;s AI detects those
++        from your photos in the next steps.
+       </p>
+-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
+-        <select
+-          value={data.hairLengthSimple || ''}
+-          onChange={(e) => updateAttr('hairLengthSimple', e.target.value)}
+-          style={{
+-            width: '100%',
+-            padding: '0.7rem 0.8rem',
+-            borderRadius: '10px',
+-            border: '1px solid rgba(139, 30, 63, 0.22)',
+-            backgroundColor: '#FFFEF9',
+-            color: '#4A2A1A',
+-            fontFamily: '"Alike", "Georgia", serif',
+-          }}
+-        >
+-          {HAIR_LENGTH_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty-hair-length'} value={o.value}>{`Hair length: ${o.label}`}</option>
+-          ))}
+-        </select>
+-        <select
+-          value={data.hairColorSimple || ''}
+-          onChange={(e) => updateAttr('hairColorSimple', e.target.value)}
+-          style={{
+-            width: '100%',
+-            padding: '0.7rem 0.8rem',
+-            borderRadius: '10px',
+-            border: '1px solid rgba(139, 30, 63, 0.22)',
+-            backgroundColor: '#FFFEF9',
+-            color: '#4A2A1A',
+-            fontFamily: '"Alike", "Georgia", serif',
+-          }}
+-        >
+-          {HAIR_COLOR_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty-hair-color'} value={o.value}>{`Hair color: ${o.label}`}</option>
+-          ))}
+-        </select>
+-        <select
+-          value={data.hairTextureSimple || ''}
+-          onChange={(e) => updateAttr('hairTextureSimple', e.target.value)}
+-          style={{
+-            width: '100%',
+-            padding: '0.7rem 0.8rem',
+-            borderRadius: '10px',
+-            border: '1px solid rgba(139, 30, 63, 0.22)',
+-            backgroundColor: '#FFFEF9',
+-            color: '#4A2A1A',
+-            fontFamily: '"Alike", "Georgia", serif',
+-          }}
+-        >
+-          {HAIR_TEXTURE_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty-hair-texture'} value={o.value}>{`Hair texture: ${o.label}`}</option>
+-          ))}
+-        </select>
+-      </div>
+     </div>
+   );
+ }
+@@ -1048,55 +947,37 @@ const SERVICE_CATEGORY_OPTIONS = [
+   { value: 'beauty_makeup', label: 'Makeup', group: 'beauty' },
+ ];
+ 
+-function StepPhotoAttributeValidation({ data, setData }) {
+-  const updateAttr = (key, value) => {
+-    const next = { ...data, [key]: value };
+-    setData(next);
+-    saveProgress(next);
+-  };
++// Read-only AI vision analysis step. No self-selects — Modeled's proprietary
++// engine (AWS Rekognition + the Modeled hair/beauty engine) detects attributes
++// from the uploaded photos. If results have already attached to the profile we
++// display them; otherwise we show the analysis-in-progress state.
++const AI_ANALYSIS_CATEGORIES = [
++  { key: 'hairLengthSimple', label: 'Hair length' },
++  { key: 'hairColorSimple', label: 'Hair color' },
++  { key: 'hairTextureSimple', label: 'Hair texture' },
++  { key: 'hairCondition', label: 'Hair condition' },
++  { key: 'skinToneSimple', label: 'Skin tone' },
++  { key: 'eyeColorSimple', label: 'Eye color' },
++];
+ 
+-  const canContinue = !!(
+-    data.hairLengthSimple &&
+-    data.hairColorSimple &&
+-    data.hairTextureSimple &&
+-    data.skinToneSimple &&
+-    data.hairCondition &&
+-    data.eyeColorSimple
+-  );
++function StepPhotoAttributeValidation({ data }) {
++  const detected = data.autoTaggedAttributes && typeof data.autoTaggedAttributes === 'object'
++    ? data.autoTaggedAttributes
++    : {};
++  const valueFor = (key) => data[key] || detected[key] || null;
++  const anyDetected = AI_ANALYSIS_CATEGORIES.some((c) => valueFor(c.key));
+ 
+-  const selectStyle = {
+-    width: '100%',
+-    padding: '0.85rem 1rem',
+-    fontSize: '1rem',
+-    borderRadius: '10px',
+-    border: '1px solid rgba(139, 30, 63, 0.25)',
+-    backgroundColor: '#FFFEF9',
+-    color: '#4A2A1A',
+-    fontFamily: '"Alike", "Georgia", serif',
+-    marginBottom: '1rem',
+-  };
+-
+-  const labelStyle = {
+-    display: 'block',
+-    fontSize: '0.9rem',
+-    fontWeight: '600',
+-    color: '#4A2A1A',
+-    marginBottom: '0.5rem',
+-    fontFamily: '"Alike", "Georgia", serif',
+-  };
++  const cap = (v) => (typeof v === 'string' ? v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : v);
+ 
+   return (
+     <div>
+-      <h3 style={{
+-        fontSize: '1.5rem',
+-        marginBottom: '0.5rem',
+-        color: '#8B1E3F',
+-        fontFamily: '"Alike", "Georgia", serif',
+-      }}>
+-        Confirm your look
++      <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#8B1E3F', fontFamily: '"Alike", "Georgia", serif' }}>
++        AI vision analysis
+       </h3>
+       <p style={{ color: '#5A3A2A', marginBottom: '1.5rem', fontFamily: '"Alike", "Georgia", serif' }}>
+-        Based on your photos, help us get the details right. This ensures we match you with the best opportunities.
++        No forms here. Modeled&apos;s proprietary engine analyzes your photos with
++        AWS Rekognition and our hair &amp; beauty models to build your match profile —
++        hair length, color, texture, condition, skin tone, and eye color.
+       </p>
+ 
+       <div style={{
+@@ -1106,78 +987,28 @@ function StepPhotoAttributeValidation({ data, setData }) {
+         borderRadius: '12px',
+         marginBottom: '1rem',
+       }}>
+-        <label style={labelStyle}>Hair length</label>
+-        <select
+-          style={selectStyle}
+-          value={data.hairLengthSimple || ''}
+-          onChange={(e) => updateAttr('hairLengthSimple', e.target.value || null)}
+-        >
+-          {HAIR_LENGTH_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
+-          ))}
+-        </select>
+-
+-        <label style={labelStyle}>Hair color</label>
+-        <select
+-          style={selectStyle}
+-          value={data.hairColorSimple || ''}
+-          onChange={(e) => updateAttr('hairColorSimple', e.target.value || null)}
+-        >
+-          {HAIR_COLOR_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
+-          ))}
+-        </select>
+-
+-        <label style={labelStyle}>Hair texture</label>
+-        <select
+-          style={selectStyle}
+-          value={data.hairTextureSimple || ''}
+-          onChange={(e) => updateAttr('hairTextureSimple', e.target.value || null)}
+-        >
+-          {HAIR_TEXTURE_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
+-          ))}
+-        </select>
+-
+-        <label style={labelStyle}>Hair condition</label>
+-        <select
+-          style={selectStyle}
+-          value={data.hairCondition || ''}
+-          onChange={(e) => updateAttr('hairCondition', e.target.value || null)}
+-        >
+-          {HAIR_CONDITION_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
+-          ))}
+-        </select>
+-
+-        <label style={labelStyle}>Skin tone</label>
+-        <select
+-          style={selectStyle}
+-          value={data.skinToneSimple || ''}
+-          onChange={(e) => updateAttr('skinToneSimple', e.target.value || null)}
+-        >
+-          {SKIN_TONE_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
+-          ))}
+-        </select>
+-
+-        <label style={labelStyle}>Eye color</label>
+-        <select
+-          style={selectStyle}
+-          value={data.eyeColorSimple || ''}
+-          onChange={(e) => updateAttr('eyeColorSimple', e.target.value || null)}
+-        >
+-          {EYE_COLOR_OPTIONS.map((o) => (
+-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
+-          ))}
+-        </select>
++        {AI_ANALYSIS_CATEGORIES.map((c) => {
++          const v = valueFor(c.key);
++          return (
++            <div key={c.key} style={{
++              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
++              padding: '0.6rem 0', borderBottom: '1px solid rgba(139,30,63,0.08)',
++              fontFamily: '"Alike", "Georgia", serif',
++            }}>
++              <span style={{ color: '#4A2A1A', fontWeight: 600 }}>{c.label}</span>
++              <span style={{ color: v ? '#2e7d32' : '#A88', fontWeight: v ? 700 : 400 }}>
++                {v ? cap(v) : 'Analyzing…'}
++              </span>
++            </div>
++          );
++        })}
+       </div>
+ 
+-      {!canContinue && (
+-        <p style={{ fontSize: '0.85rem', color: '#5A3A2A', fontFamily: '"Alike", "Georgia", serif' }}>
+-          Please complete all fields to continue.
+-        </p>
+-      )}
++      <p style={{ fontSize: '0.85rem', color: '#5A3A2A', fontFamily: '"Alike", "Georgia", serif' }}>
++        {anyDetected
++          ? 'Detected automatically from your photos. Our team confirms details during review.'
++          : 'Your photos are queued for AI analysis. Attributes finalize after you submit — you can continue.'}
++      </p>
+     </div>
+   );
+ }
+@@ -2363,6 +2194,19 @@ export default function ModelOnboard() {
+       }
+     }
+ 
++    // Basic Info — require a valid date of birth AND 18+ (age gate)
++    const basicInfoStepIndex = steps.findIndex((s) => s.component === StepBasicInfo);
++    if (currentStep === basicInfoStepIndex) {
++      if (!isValidDateString(formData.birthday)) {
++        alert('Please enter your date of birth.');
++        return;
++      }
++      if (!isAdult(formData.birthday)) {
++        alert('You must be 18 or older to join Modeled.');
++        return;
++      }
++    }
++
+     // Photos step - require at least 3 photos before continuing
+     const photosStepIndex = steps.findIndex((s) => s.component === StepPhotos);
+     if (currentStep === photosStepIndex && (!formData.photoUrls || formData.photoUrls.length < 3)) {
+@@ -2370,23 +2214,6 @@ export default function ModelOnboard() {
+       return;
+     }
+ 
+-    // "Confirm your look" — require the core hair/skin attributes (matching inputs)
+-    const attributesStepIndex = steps.findIndex((s) => s.component === StepPhotoAttributeValidation);
+-    if (currentStep === attributesStepIndex) {
+-      const missing = [
+-        ['hairLengthSimple', 'hair length'],
+-        ['hairColorSimple', 'hair color'],
+-        ['hairTextureSimple', 'hair texture'],
+-        ['hairCondition', 'hair condition'],
+-        ['skinToneSimple', 'skin tone'],
+-        ['eyeColorSimple', 'eye color'],
+-      ].filter(([k]) => !formData[k]).map(([, label]) => label);
+-      if (missing.length) {
+-        alert(`Please confirm: ${missing.join(', ')}.`);
+-        return;
+-      }
+-    }
+-
+     if (currentStep < steps.length - 1) {
+       const nextStep = currentStep + 1;
+       setCurrentStep(nextStep);
+@@ -2476,12 +2303,14 @@ export default function ModelOnboard() {
+         }
+       }
+ 
+-      // Core look attributes are now collected in the "Confirm your look" step and
+-      // are required for matching quality.
+-      const requiredLook = ['hairLengthSimple', 'hairColorSimple', 'hairTextureSimple', 'hairCondition', 'skinToneSimple', 'eyeColorSimple'];
+-      const missingLook = requiredLook.filter((k) => !formData[k]);
+-      if (missingLook.length) {
+-        alert('Please complete the "Confirm your look" step (hair & skin details) before submitting.');
++      // AGE VERIFICATION — always enforced. Must have a valid DOB and be 18+.
++      if (!isValidDateString(formData.birthday)) {
++        alert('Please enter your date of birth.');
++        setIsSubmitting(false);
++        return;
++      }
++      if (!isAdult(formData.birthday)) {
++        alert('You must be 18 or older to join Modeled.');
+         setIsSubmitting(false);
+         return;
+       }
+@@ -2492,16 +2321,16 @@ export default function ModelOnboard() {
+         return;
+       }
+ 
++      // GOV ID VERIFICATION — required unless explicitly bypassed for dev/test.
++      // The IdentityVerification step (Rekognition face match + ID text check)
++      // sets identityVerificationStatus to verified/manual_review on completion.
+       const skipIdentityVerification = import.meta?.env?.VITE_SKIP_IDENTITY_VERIFICATION === 'true';
+-      const requireOnboardIdentity = import.meta?.env?.VITE_REQUIRE_ONBOARD_IDENTITY === 'true';
+-
+-      // Launch default: identity is optional — admin completes verification in CRM. Set VITE_REQUIRE_ONBOARD_IDENTITY=true to hard-require verified/manual_review before submit.
+-      if (requireOnboardIdentity &&
+-          !skipIdentityVerification &&
++      const requireIdentity = !allowOnboardingVerificationBypass() && !skipIdentityVerification;
++      if (requireIdentity &&
+           (!formData.identityVerificationStatus ||
+             (formData.identityVerificationStatus !== 'verified' &&
+               formData.identityVerificationStatus !== 'manual_review'))) {
+-        alert('Please complete identity verification before submitting your profile.');
++        alert('Please complete government ID verification (upload your ID and a selfie) before submitting.');
+         setIsSubmitting(false);
+         return;
+       }
+@@ -2526,6 +2355,7 @@ export default function ModelOnboard() {
+ 
+       const profileData = {
+         userId: userId,
++        storageIdentityId: storageEntityId || null, // links S3 photo uploads to this profile for analysis
+         email: formData.email || user?.signInDetails?.loginId || '',
+         firstName: formData.firstName,
+         lastName: formData.lastName,
+diff --git a/src/utils/modelOnboardPayload.js b/src/utils/modelOnboardPayload.js
+index 5c1f902..154fd50 100644
+--- a/src/utils/modelOnboardPayload.js
++++ b/src/utils/modelOnboardPayload.js
+@@ -6,17 +6,31 @@ export function isValidDateString(s) {
+ }
+ 
+ /**
+- * Derive the matching ageRange bucket from a YYYY-MM-DD birthday.
+- * Returns one of '18-24' | '25-34' | '35-44' | '45-54' | '55+' or null.
++ * Compute integer age from a YYYY-MM-DD birthday, or null if invalid.
+  */
+-export function ageRangeFromBirthday(birthday) {
++export function ageFromBirthday(birthday) {
+   if (!isValidDateString(birthday)) return null;
+   const dob = new Date(birthday);
+   const now = new Date();
+   let age = now.getFullYear() - dob.getFullYear();
+   const m = now.getMonth() - dob.getMonth();
+   if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+-  if (age < 18) return null;
++  return age;
++}
++
++/** True only if the birthday is valid AND the person is 18 or older. */
++export function isAdult(birthday) {
++  const age = ageFromBirthday(birthday);
++  return age != null && age >= 18;
++}
++
++/**
++ * Derive the matching ageRange bucket from a YYYY-MM-DD birthday.
++ * Returns one of '18-24' | '25-34' | '35-44' | '45-54' | '55+' or null.
++ */
++export function ageRangeFromBirthday(birthday) {
++  const age = ageFromBirthday(birthday);
++  if (age == null || age < 18) return null;
+   if (age <= 24) return '18-24';
+   if (age <= 34) return '25-34';
+   if (age <= 44) return '35-44';
+diff --git a/src/utils/photoSubmission.js b/src/utils/photoSubmission.js
+index 25d65b9..f6564c2 100644
+--- a/src/utils/photoSubmission.js
++++ b/src/utils/photoSubmission.js
+@@ -190,6 +190,56 @@ export async function updateModelProfileWithPhotos(userId, uploadResults) {
+   }
+ }
+ 
++// ============ DRAFT PROFILE (so photo-analysis can attach) ============
++
++/**
++ * Ensure a ModelProfile row exists BEFORE photos are uploaded, so the S3
++ * onUpload trigger (photo-analysis) can find this profile and attach the
++ * Rekognition/Bedrock attributes. Without this, photos upload before the
++ * profile exists and auto-tagging has nothing to write to.
++ *
++ * @param subUserId        Cognito sub (ModelProfile.userId)
++ * @param storageIdentityId Cognito identity-pool id (the S3 path segment)
++ * @param basics           { firstName, lastName, email, phone, locationZip }
++ */
++export async function ensureModelProfileDraft(subUserId, storageIdentityId, basics = {}) {
++  if (shouldUseMockData()) return null;
++  const modelProfile = client?.models?.ModelProfile;
++  if (!subUserId || !modelProfile?.list || !modelProfile?.create) return null;
++  try {
++    const { data: existing } = await modelProfile.list({
++      filter: { userId: { eq: subUserId } },
++      limit: 1,
++    });
++    if (existing?.[0]?.id) {
++      // Backfill storageIdentityId if missing so the trigger can match.
++      if (storageIdentityId && !existing[0].storageIdentityId) {
++        await modelProfile.update({ id: existing[0].id, storageIdentityId });
++      }
++      return existing[0];
++    }
++    if (!basics.firstName || !basics.lastName || !basics.email || !basics.phone) {
++      // Required fields not ready yet; skip draft (final submit will create).
++      return null;
++    }
++    const { data: created } = await modelProfile.create({
++      userId: subUserId,
++      storageIdentityId: storageIdentityId || null,
++      email: basics.email,
++      firstName: basics.firstName,
++      lastName: basics.lastName,
++      phone: basics.phone,
++      locationZip: basics.locationZip || null,
++      status: 'pending',
++      photoAnalysisStatus: 'pending',
++    });
++    return created || null;
++  } catch (err) {
++    console.warn('ensureModelProfileDraft skipped (non-fatal):', err?.message || err);
++    return null;
++  }
++}
++
+ // ============ SUBMISSION FLOW ============
+ 
+ /**
+-- 
+2.43.0
+
+
+From 57253666fbcce93e5becc4672105b2f6587a3542 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 7 Jun 2026 18:09:00 +0000
+Subject: [PATCH 2/2] Add model onboarding demo-today runbook
+
+Separates done-in-code (no self-selects, age 18+, gov ID required, Rekognition
+linkage fix, photo upload hardening) from AWS config only the user can do
+(deploy, SES email, SNS SMS, Bedrock model access, Cognito Admin group), with
+demo-day env flags and an honest works-now vs needs-config breakdown.
+
+https://claude.ai/code/session_0191zcDc6b5V3sntfdRfuvg2
+---
+ docs/MODEL_ONBOARDING_DEMO_RUNBOOK.md | 86 +++++++++++++++++++++++++++
+ 1 file changed, 86 insertions(+)
+ create mode 100644 docs/MODEL_ONBOARDING_DEMO_RUNBOOK.md
+
+diff --git a/docs/MODEL_ONBOARDING_DEMO_RUNBOOK.md b/docs/MODEL_ONBOARDING_DEMO_RUNBOOK.md
+new file mode 100644
+index 0000000..74f3b12
+--- /dev/null
++++ b/docs/MODEL_ONBOARDING_DEMO_RUNBOOK.md
+@@ -0,0 +1,86 @@
++# Model Onboarding — DEMO TODAY Runbook
++
++**Date:** 2026-06-07
++**Read this first.** It separates what is **done in code** from what **only you can do in AWS** (I have no access to your AWS account from my environment).
++
++---
++
++## What changed (code — done & verified to build)
++
++1. **No more self-selects.** Removed every hair/skin/eye dropdown — both the "Confirm your look" step and the hidden "Quick features (self-selected)" selects in the Modeling-path step. Replaced with a read-only **"AI vision analysis"** step.
++2. **Age 18+ verification.** DOB is required and **18+ is enforced** at step advance and at submit. Under-18 cannot continue. (Client-side — works immediately, no backend.)
++3. **Gov ID required.** Submission now requires ID verification (verified/manual_review) unless dev-bypassed.
++4. **Rekognition linkage fixed.** Root cause found: photos are stored under the Cognito **identity id**, but profiles are keyed by Cognito **sub** — so analysis never matched. Now: a profile **draft is created before photo upload**, `storageIdentityId` is stored, and the Lambda matches on **sub OR storageIdentityId**.
++5. **Photo upload hardened.** Identity resolved at upload time with refresh fallback (no more "Preparing secure upload…" dead-end).
++
++**Verified in my environment:** backend `tsc` clean · Vite build passes · 42/42 matching tests green.
++
++---
++
++## ⚠️ The honest part: what must happen in YOUR AWS for the demo to actually work
++
++I cannot deploy or configure AWS from here. These are required and only take ~20–30 min:
++
++### A. Deploy the backend (required for everything server-side)
++```bash
++# in your Cursor clone, after applying the patches
++npx ampx sandbox        # or: npx ampx pipeline-deploy --branch main --app-id <id>
++```
++This creates the new `ModelProfile` columns (`storageIdentityId`, etc.) and ships the photo-analysis Lambda fix.
++
++### B. Email verification — why it "doesn't work"
++- The **code is correct** (standard Cognito attribute verification). With Amplify Gen 2 `loginWith: { email: true }`, **Cognito verifies email at sign-up** using its default email sender — this should work once deployed.
++- If emails aren't arriving: Cognito default email has a low daily cap. For reliable sending, verify an **SES** identity and set `AMPLIFY_SES_FROM_EMAIL` (your `auth/resource.ts` already supports this).
++
++### C. SMS verification — the hard one
++- Cognito SMS needs **Amazon SNS** with an **origination number / spending limit**, and in the SNS **sandbox** every destination number must be pre-verified. Same-day SMS to arbitrary numbers usually isn't possible without leaving the sandbox (AWS approval).
++- **Demo recommendation:** keep phone as "verify **or skip**" (already implemented) and demo **email + gov ID + age** as the verification story. Pursue SNS production access separately.
++
++### D. Rekognition + Bedrock (for the AI vision analysis)
++- **Bedrock → Model access** (us-east-1): enable **Claude 3.5 Sonnet + Haiku**.
++- The `photo-analysis` IAM (Rekognition + Bedrock) was fixed in an earlier patch — make sure that patch is applied + deployed.
++- After deploy, uploaded photos trigger analysis → attributes attach to the profile (via the linkage fix) → show in admin and feed matching.
++
++### E. Cognito Admin group (to see the admin side)
++- Cognito → your User Pool → Groups → **Admin** → add your user.
++
++---
++
++## Demo-day env flags (`.env.local`, then restart `npm run dev`)
++
++**Option 1 — Full real verification (best story, needs A–E above):**
++```env
++VITE_USE_MOCK_DATA=false
++VITE_FULL_APP_ACCESS=true
++VITE_BYPASS_ONBOARDING_VERIFICATION=false   # require email + ID
++VITE_SKIP_IDENTITY_VERIFICATION=false        # require gov ID
++```
++
++**Option 2 — Safe fallback if SMS/Rekognition aren't ready:**
++```env
++VITE_USE_MOCK_DATA=false
++VITE_FULL_APP_ACCESS=true
++VITE_BYPASS_ONBOARDING_VERIFICATION=true    # skip email/SMS/ID gates for the walkthrough
++```
++*Age 18+ is still enforced in Option 2 (it's client-side and always on).*
++
++---
++
++## The flow you'll demo (11 steps)
++
++```
++Basic Info (DOB → 18+ gate) → Modeling path → Service prefs → Availability
++→ Photos (3+, upload to S3) → AI vision analysis (Rekognition, read-only)
++→ Data Privacy & Terms → Review → Email verify → Phone verify (or skip)
++→ Gov ID verify (ID + selfie, Rekognition face match) → Submit
++→ /admin/onboarding (pending) → Approve → active
++```
++
++---
++
++## Straight talk
++- **Works the moment you deploy + flag:** no self-selects, age 18+, the full guided flow, photo upload, gov-ID upload UI, admin capture.
++- **Needs the AWS config above to be "live":** email delivery (SES), SMS (SNS — hardest), Rekognition auto-attributes + ID face-match (deploy + Bedrock access).
++- **Not runtime-tested by me:** the Rekognition linkage + draft-create path (no AWS access here). Please smoke-test after deploy: onboard a model → check the `ModelProfile` row gets `autoTaggedAttributes` after photo analysis.
++
++If anything errors during your deploy/smoke test, paste the error and I'll fix it fast.
+-- 
+2.43.0
+

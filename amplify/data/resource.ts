@@ -26,7 +26,8 @@ const schema = a.schema({
   ModelProfile: a
     .model({
       // Basic Info
-      userId: a.string().required(),
+      userId: a.string().required(), // Cognito sub
+      storageIdentityId: a.string(), // Cognito identity-pool id (S3 photo path key)
       email: a.string().required(),
       firstName: a.string().required(),
       lastName: a.string().required(),

@@ -5,7 +5,7 @@ import { generateClient } from 'aws-amplify/data';
 import { sendUserAttributeVerificationCode, confirmUserAttribute, updateUserAttribute, fetchAuthSession } from 'aws-amplify/auth';
 import GuidedPhotoCapture from '../components/GuidedPhotoCapture';
 import IdentityVerification from '../components/IdentityVerification';
-import { submitPhotosForAnalysis } from '../utils/photoSubmission';
+import { submitPhotosForAnalysis, ensureModelProfileDraft } from '../utils/photoSubmission';
 import { shouldUseMockData } from '../utils/mockDataService';
 import { getAuthenticatorUserId } from '../utils/authUtils';
 import { normalizeDeployedProfileStatus } from '../utils/deployedApiEnums';
@@ -652,6 +652,13 @@ function StepPhotos({ data, setData, userId, uploadEntityId }) {
         setUploadError('Upload setup is still loading. Please wait a moment and try submitting photos again.');
         return;
       }
+      await ensureModelProfileDraft(userId, storageOwnerId, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        locationZip: data.locationZip,
+      });
       const result = await submitPhotosForAnalysis(photoData, storageOwnerId);
 
       if (result.success) {
@@ -793,57 +800,7 @@ function StepPhotos({ data, setData, userId, uploadEntityId }) {
   );
 }
 
-// Attribute options for photo validation (match ModelProfile schema & matching engine)
-const HAIR_LENGTH_OPTIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'short', label: 'Short (chin or above)' },
-  { value: 'medium', label: 'Medium (shoulder length)' },
-  { value: 'long', label: 'Long (past shoulders)' },
-  { value: 'extra_long', label: 'Extra long (mid-back or longer)' },
-];
-const HAIR_COLOR_OPTIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'black', label: 'Black' },
-  { value: 'brown', label: 'Brown' },
-  { value: 'blonde', label: 'Blonde' },
-  { value: 'red', label: 'Red' },
-  { value: 'gray', label: 'Gray' },
-  { value: 'colored', label: 'Colored (highlights, fashion color, etc.)' },
-];
-const HAIR_TEXTURE_OPTIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'straight', label: 'Straight' },
-  { value: 'wavy', label: 'Wavy' },
-  { value: 'curly', label: 'Curly' },
-  { value: 'coily', label: 'Coily' },
-];
-const SKIN_TONE_OPTIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'fair', label: 'Fair' },
-  { value: 'light', label: 'Light' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'olive', label: 'Olive' },
-  { value: 'tan', label: 'Tan' },
-  { value: 'brown', label: 'Brown' },
-  { value: 'dark', label: 'Dark' },
-];
-const HAIR_CONDITION_OPTIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'healthy', label: 'Healthy' },
-  { value: 'color_treated', label: 'Color treated' },
-  { value: 'damaged', label: 'Damaged' },
-  { value: 'virgin', label: 'Virgin (never colored/chemically treated)' },
-];
-const EYE_COLOR_OPTIONS = [
-  { value: '', label: 'Select...' },
-  { value: 'brown', label: 'Brown' },
-  { value: 'hazel', label: 'Hazel' },
-  { value: 'green', label: 'Green' },
-  { value: 'blue', label: 'Blue' },
-  { value: 'gray', label: 'Gray' },
-  { value: 'amber', label: 'Amber' },
-  { value: 'other', label: 'Other' },
-];
+// Self-select hair/skin/eye options removed — detected via Rekognition + hair/beauty engine.
 const MODELING_FOCUS_OPTIONS = [
   {
     value: 'everyday',
@@ -874,12 +831,6 @@ function StepModelingFocus({ data, setData }) {
   const toggleTraining = (key) => {
     const nextTraining = { ...training, [key]: !training[key] };
     const next = { ...data, mediaTraining: nextTraining };
-    setData(next);
-    saveProgress(next);
-  };
-
-  const updateAttr = (key, value) => {
-    const next = { ...data, [key]: value || null };
     setData(next);
     saveProgress(next);
   };
@@ -952,65 +903,9 @@ function StepModelingFocus({ data, setData }) {
         ))}
       </div>
 
-      <h4 style={{ fontSize: '1.05rem', marginTop: '1.4rem', marginBottom: '0.5rem', color: '#8B1E3F', fontFamily: '"Alike", "Georgia", serif' }}>
-        Quick features (self-selected)
-      </h4>
-      <p style={{ color: '#5A3A2A', marginBottom: '0.9rem', fontSize: '0.9rem', fontFamily: '"Alike", "Georgia", serif' }}>
-        Pick what is most accurate today. We combine this with photo analysis for matching.
+      <p style={{ color: '#5A3A2A', marginTop: '1.4rem', fontSize: '0.85rem', fontFamily: '"Alike", "Georgia", serif' }}>
+        No need to describe your hair or features — Modeled&apos;s AI detects those from your photos in the next steps.
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.6rem' }}>
-        <select
-          value={data.hairLengthSimple || ''}
-          onChange={(e) => updateAttr('hairLengthSimple', e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.7rem 0.8rem',
-            borderRadius: '10px',
-            border: '1px solid rgba(139, 30, 63, 0.22)',
-            backgroundColor: '#FFFEF9',
-            color: '#4A2A1A',
-            fontFamily: '"Alike", "Georgia", serif',
-          }}
-        >
-          {HAIR_LENGTH_OPTIONS.map((o) => (
-            <option key={o.value || 'empty-hair-length'} value={o.value}>{`Hair length: ${o.label}`}</option>
-          ))}
-        </select>
-        <select
-          value={data.hairColorSimple || ''}
-          onChange={(e) => updateAttr('hairColorSimple', e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.7rem 0.8rem',
-            borderRadius: '10px',
-            border: '1px solid rgba(139, 30, 63, 0.22)',
-            backgroundColor: '#FFFEF9',
-            color: '#4A2A1A',
-            fontFamily: '"Alike", "Georgia", serif',
-          }}
-        >
-          {HAIR_COLOR_OPTIONS.map((o) => (
-            <option key={o.value || 'empty-hair-color'} value={o.value}>{`Hair color: ${o.label}`}</option>
-          ))}
-        </select>
-        <select
-          value={data.hairTextureSimple || ''}
-          onChange={(e) => updateAttr('hairTextureSimple', e.target.value)}
-          style={{
-            width: '100%',
-            padding: '0.7rem 0.8rem',
-            borderRadius: '10px',
-            border: '1px solid rgba(139, 30, 63, 0.22)',
-            backgroundColor: '#FFFEF9',
-            color: '#4A2A1A',
-            fontFamily: '"Alike", "Georgia", serif',
-          }}
-        >
-          {HAIR_TEXTURE_OPTIONS.map((o) => (
-            <option key={o.value || 'empty-hair-texture'} value={o.value}>{`Hair texture: ${o.label}`}</option>
-          ))}
-        </select>
-      </div>
     </div>
   );
 }
@@ -1031,55 +926,30 @@ const SERVICE_CATEGORY_OPTIONS = [
   { value: 'beauty_makeup', label: 'Makeup', group: 'beauty' },
 ];
 
-function StepPhotoAttributeValidation({ data, setData }) {
-  const updateAttr = (key, value) => {
-    const next = { ...data, [key]: value };
-    setData(next);
-    saveProgress(next);
-  };
+const AI_ANALYSIS_CATEGORIES = [
+  { key: 'hairLengthSimple', label: 'Hair length' },
+  { key: 'hairColorSimple', label: 'Hair color' },
+  { key: 'hairTextureSimple', label: 'Hair texture' },
+  { key: 'hairCondition', label: 'Hair condition' },
+  { key: 'skinToneSimple', label: 'Skin tone' },
+  { key: 'eyeColorSimple', label: 'Eye color' },
+];
 
-  const canContinue = !!(
-    data.hairLengthSimple &&
-    data.hairColorSimple &&
-    data.hairTextureSimple &&
-    data.skinToneSimple &&
-    data.hairCondition &&
-    data.eyeColorSimple
-  );
-
-  const selectStyle = {
-    width: '100%',
-    padding: '0.85rem 1rem',
-    fontSize: '1rem',
-    borderRadius: '10px',
-    border: '1px solid rgba(139, 30, 63, 0.25)',
-    backgroundColor: '#FFFEF9',
-    color: '#4A2A1A',
-    fontFamily: '"Alike", "Georgia", serif',
-    marginBottom: '1rem',
-  };
-
-  const labelStyle = {
-    display: 'block',
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    color: '#4A2A1A',
-    marginBottom: '0.5rem',
-    fontFamily: '"Alike", "Georgia", serif',
-  };
+function StepPhotoAttributeValidation({ data }) {
+  const detected = data.autoTaggedAttributes && typeof data.autoTaggedAttributes === 'object'
+    ? data.autoTaggedAttributes
+    : {};
+  const valueFor = (key) => data[key] || detected[key] || null;
+  const anyDetected = AI_ANALYSIS_CATEGORIES.some((c) => valueFor(c.key));
+  const cap = (v) => (typeof v === 'string' ? v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()) : v);
 
   return (
     <div>
-      <h3 style={{
-        fontSize: '1.5rem',
-        marginBottom: '0.5rem',
-        color: '#8B1E3F',
-        fontFamily: '"Alike", "Georgia", serif',
-      }}>
-        Confirm your look
+      <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: '#8B1E3F', fontFamily: '"Alike", "Georgia", serif' }}>
+        AI vision analysis
       </h3>
       <p style={{ color: '#5A3A2A', marginBottom: '1.5rem', fontFamily: '"Alike", "Georgia", serif' }}>
-        Based on your photos, help us get the details right. This ensures we match you with the best opportunities.
+        No forms here. Modeled&apos;s proprietary engine analyzes your photos with AWS Rekognition and our hair &amp; beauty models.
       </p>
 
       <div style={{
@@ -1089,78 +959,28 @@ function StepPhotoAttributeValidation({ data, setData }) {
         borderRadius: '12px',
         marginBottom: '1rem',
       }}>
-        <label style={labelStyle}>Hair length</label>
-        <select
-          style={selectStyle}
-          value={data.hairLengthSimple || ''}
-          onChange={(e) => updateAttr('hairLengthSimple', e.target.value || null)}
-        >
-          {HAIR_LENGTH_OPTIONS.map((o) => (
-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Hair color</label>
-        <select
-          style={selectStyle}
-          value={data.hairColorSimple || ''}
-          onChange={(e) => updateAttr('hairColorSimple', e.target.value || null)}
-        >
-          {HAIR_COLOR_OPTIONS.map((o) => (
-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Hair texture</label>
-        <select
-          style={selectStyle}
-          value={data.hairTextureSimple || ''}
-          onChange={(e) => updateAttr('hairTextureSimple', e.target.value || null)}
-        >
-          {HAIR_TEXTURE_OPTIONS.map((o) => (
-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Hair condition</label>
-        <select
-          style={selectStyle}
-          value={data.hairCondition || ''}
-          onChange={(e) => updateAttr('hairCondition', e.target.value || null)}
-        >
-          {HAIR_CONDITION_OPTIONS.map((o) => (
-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Skin tone</label>
-        <select
-          style={selectStyle}
-          value={data.skinToneSimple || ''}
-          onChange={(e) => updateAttr('skinToneSimple', e.target.value || null)}
-        >
-          {SKIN_TONE_OPTIONS.map((o) => (
-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-
-        <label style={labelStyle}>Eye color</label>
-        <select
-          style={selectStyle}
-          value={data.eyeColorSimple || ''}
-          onChange={(e) => updateAttr('eyeColorSimple', e.target.value || null)}
-        >
-          {EYE_COLOR_OPTIONS.map((o) => (
-            <option key={o.value || 'empty'} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        {AI_ANALYSIS_CATEGORIES.map((c) => {
+          const v = valueFor(c.key);
+          return (
+            <div key={c.key} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '0.6rem 0', borderBottom: '1px solid rgba(139,30,63,0.08)',
+              fontFamily: '"Alike", "Georgia", serif',
+            }}>
+              <span style={{ color: '#4A2A1A', fontWeight: 600 }}>{c.label}</span>
+              <span style={{ color: v ? '#2e7d32' : '#A88', fontWeight: v ? 700 : 400 }}>
+                {v ? cap(v) : 'Analyzing…'}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
-      {!canContinue && (
-        <p style={{ fontSize: '0.85rem', color: '#5A3A2A', fontFamily: '"Alike", "Georgia", serif' }}>
-          Please complete all fields to continue.
-        </p>
-      )}
+      <p style={{ fontSize: '0.85rem', color: '#5A3A2A', fontFamily: '"Alike", "Georgia", serif' }}>
+        {anyDetected
+          ? 'Detected automatically from your photos. Our team confirms details during review.'
+          : 'Your photos are queued for AI analysis. Attributes finalize after you submit — you can continue.'}
+      </p>
     </div>
   );
 }
@@ -2289,6 +2109,7 @@ export default function ModelOnboard() {
     { title: 'Service Preferences', component: StepGetToKnowYou },
     { title: 'Availability', component: StepAvailability },
     { title: 'Photos', component: StepPhotos },
+    { title: 'AI vision analysis', component: StepPhotoAttributeValidation },
     { title: 'Data Privacy & Terms', component: StepDataPrivacy },
     { title: 'Review', component: StepReview },
     { title: 'Email Verification', component: StepEmailVerification },
@@ -2346,6 +2167,18 @@ export default function ModelOnboard() {
     if (currentStep === modelingFocusStepIndex) {
       if (!formData.modelingFocus || !['everyday', 'editorial', 'both'].includes(formData.modelingFocus)) {
         alert('Please choose whether you are interested in Everyday, Editorial, or Both.');
+        return;
+      }
+    }
+
+    const basicInfoStepIndex = steps.findIndex((s) => s.component === StepBasicInfo);
+    if (currentStep === basicInfoStepIndex) {
+      if (!isValidDateString(formData.birthday)) {
+        alert('Please enter your date of birth.');
+        return;
+      }
+      if (!isAdult(formData.birthday)) {
+        alert('You must be 18 or older to join Modeled.');
         return;
       }
     }
@@ -2444,7 +2277,16 @@ export default function ModelOnboard() {
       //   return;
       // }
 
-      // Confirm-look attributes were intentionally removed from onboarding to keep flow fast.
+      if (!isValidDateString(formData.birthday)) {
+        alert('Please enter your date of birth.');
+        setIsSubmitting(false);
+        return;
+      }
+      if (!isAdult(formData.birthday)) {
+        alert('You must be 18 or older to join Modeled.');
+        setIsSubmitting(false);
+        return;
+      }
 
       if (!formData.termsAccepted) {
         alert('Please accept the Terms & Conditions to continue.');
@@ -2453,15 +2295,12 @@ export default function ModelOnboard() {
       }
 
       const skipIdentityVerification = import.meta?.env?.VITE_SKIP_IDENTITY_VERIFICATION === 'true';
-      const requireOnboardIdentity = import.meta?.env?.VITE_REQUIRE_ONBOARD_IDENTITY === 'true';
-
-      // Launch default: identity is optional — admin completes verification in CRM. Set VITE_REQUIRE_ONBOARD_IDENTITY=true to hard-require verified/manual_review before submit.
-      if (requireOnboardIdentity &&
-          !skipIdentityVerification &&
+      const requireIdentity = !allowOnboardingVerificationBypass() && !skipIdentityVerification;
+      if (requireIdentity &&
           (!formData.identityVerificationStatus ||
             (formData.identityVerificationStatus !== 'verified' &&
               formData.identityVerificationStatus !== 'manual_review'))) {
-        alert('Please complete identity verification before submitting your profile.');
+        alert('Please complete government ID verification (upload your ID and a selfie) before submitting.');
         setIsSubmitting(false);
         return;
       }
@@ -2486,6 +2325,7 @@ export default function ModelOnboard() {
 
       const profileData = {
         userId: userId,
+        storageIdentityId: storageEntityId || null,
         email: formData.email || user?.signInDetails?.loginId || '',
         firstName: formData.firstName,
         lastName: formData.lastName,

@@ -318,7 +318,7 @@ async function updateModelProfile(
   const client = await getDataClient();
 
   const { data: profiles } = await client.models.ModelProfile.list({
-    filter: { userId: { eq: userId } },
+    filter: { or: [{ userId: { eq: userId } }, { storageIdentityId: { eq: userId } }] },
     limit: 1,
   });
   const profile = profiles?.[0];
