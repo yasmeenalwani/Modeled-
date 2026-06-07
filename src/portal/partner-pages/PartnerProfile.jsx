@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
+import { getAuthenticatorUserId } from '../../utils/authUtils';
+import { getPartnerProfile } from '../../utils/profileService';
+import { shouldUseMockData } from '../../utils/mockDataService';
 import PhotoUploader from '../../components/PhotoUploader';
 import VideoUploader from '../../components/VideoUploader';
 import StorageUsage from '../../components/StorageUsage';
@@ -259,8 +262,8 @@ const styles = {
   },
 };
 
-// Mock data (would come from API)
-const salonData = {
+// Default display until partner profile loads from API
+const defaultSalonData = {
   id: 'salon-789',
   name: 'Luxe Studio',
   tagline: 'Where Beauty Meets Innovation',
@@ -291,12 +294,62 @@ const salonData = {
 
 export default function PartnerProfile() {
   const { user } = useAuthenticator();
-  const [logo, setLogo] = useState(salonData.logo);
-  const [salonPhotos, setSalonPhotos] = useState(salonData.salonPhotos);
+  const [salonData, setSalonData] = useState(defaultSalonData);
+  const [loading, setLoading] = useState(true);
+  const [logo, setLogo] = useState(defaultSalonData.logo);
+  const [salonPhotos, setSalonPhotos] = useState(defaultSalonData.salonPhotos);
   const [contactPhotos, setContactPhotos] = useState([]);
   const [profileVideo, setProfileVideo] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [showLogoUpload, setShowLogoUpload] = useState(false);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const authUserId = getAuthenticatorUserId(user);
+      if (!authUserId) {
+        setLoading(false);
+        return;
+      }
+      if (shouldUseMockData()) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const partner = await getPartnerProfile(authUserId);
+        if (partner) {
+          const mapped = {
+            id: partner.id || partner.userId,
+            name: partner.businessName || defaultSalonData.name,
+            tagline: partner.contactName ? `Contact: ${partner.contactName}` : defaultSalonData.tagline,
+            address: partner.address || '',
+            city: partner.city || '',
+            state: partner.state || '',
+            zip: partner.zip || '',
+            phone: partner.phone || '',
+            email: partner.email || '',
+            website: partner.website || '',
+            description: partner.somethingFun || defaultSalonData.description,
+            founded: defaultSalonData.founded,
+            teamSize: defaultSalonData.teamSize,
+            modelsServed: defaultSalonData.modelsServed,
+            rating: defaultSalonData.rating,
+            logo: null,
+            salonPhotos: (partner.salonPhotoUrls || []).map((url) => ({ url, key: url })),
+            hours: defaultSalonData.hours,
+          };
+          setSalonData(mapped);
+          setLogo(mapped.logo);
+          setSalonPhotos(mapped.salonPhotos);
+        }
+      } catch (error) {
+        console.error('Error loading partner profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [user]);
 
   // Handle logo upload
   const handleLogoUpload = (results) => {
@@ -320,6 +373,16 @@ export default function PartnerProfile() {
     setDocuments(prev => [...prev, ...newDocs]);
     console.log('Documents uploaded:', results);
   };
+
+  if (loading) {
+    return (
+      <div style={{ ...styles.container, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={styles.subtitle}>Loading your partner profile…</p>
+      </div>
+    );
+  }
+
+  const authUserId = getAuthenticatorUserId(user);
 
   return (
     <div style={styles.container}>
@@ -470,7 +533,7 @@ export default function PartnerProfile() {
           </div>
           <InspirationBoard
             userType="partner"
-            userId={user.userId || salonData.id}
+            userId={authUserId || salonData.id}
           />
         </div>
       )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
+import { getAuthenticatorUserId } from '../../utils/authUtils';
 import { waitlistStyles as styles } from './waitlistStyles';
 
 const client = generateClient();
@@ -57,7 +58,7 @@ export default function ModelWaitlist() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const userId = user?.userId || user?.username || user?.signInDetails?.loginId;
+      const userId = getAuthenticatorUserId(user);
       if (!userId) {
         alert('Please sign in to join the waitlist.');
         setIsSubmitting(false);

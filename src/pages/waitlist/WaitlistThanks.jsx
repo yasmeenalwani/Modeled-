@@ -7,6 +7,15 @@ const roleCopy = {
   partner: 'partner inquiry',
 };
 
+const appliedCopy = {
+  model:
+    "Thanks — your model profile is submitted. We'll review your details and photos and email you when you're approved or if we need anything else.",
+  professional:
+    "Thanks — your professional application is submitted. We'll review your credentials and portfolio and email you when you're approved or if we need anything else.",
+  partner:
+    "Thanks — your partner inquiry is submitted. We'll review your business details and reach out when you're approved or if we need anything else.",
+};
+
 export default function WaitlistThanks() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -41,11 +50,11 @@ export default function WaitlistThanks() {
           MODELED
         </div>
         <h1 style={{ fontSize: '1.5rem', marginBottom: '1rem', color: '#4A2A1A' }}>
-          {applied && role === 'model' ? 'Application received' : "You're on the list"}
+          {applied && appliedCopy[role] ? 'Application received' : "You're on the list"}
         </h1>
         <p style={{ fontSize: '1rem', lineHeight: 1.6, color: '#5A3A2A', marginBottom: '2rem' }}>
-          {applied && role === 'model'
-            ? "Thanks — your model profile is submitted. We'll review your details and photos and email you when you're approved or if we need anything else."
+          {applied && appliedCopy[role]
+            ? appliedCopy[role]
             : `Thanks for submitting your ${label}. We're onboarding in small waves and will reach out at the email you provided.`}
         </p>
         <button

@@ -11,6 +11,7 @@ import ModelCardOverview from '../../components/profile/ModelCardOverview';
 import ModelFocusLayout from '../../components/profile/ModelFocusLayout';
 import { getProfilePhotoPath, getVideoReelPath } from '../../utils/storage';
 import { getMockModel, shouldUseMockData } from '../../utils/mockDataService';
+import { getAuthenticatorUserId } from '../../utils/authUtils';
 import { updateEngagementScore, updateModelLastActive } from '../../utils/agenticScores';
 
 const client = generateClient();
@@ -969,8 +970,7 @@ export default function ModelProfile() {
         return;
       }
 
-      const authUserId =
-        user?.userId || user?.username || user?.userSub;
+      const authUserId = getAuthenticatorUserId(user);
       if (!authUserId) {
         setLoading(false);
         return;

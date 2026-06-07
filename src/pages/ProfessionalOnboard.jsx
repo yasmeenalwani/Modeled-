@@ -8,6 +8,7 @@ import PhotoUploader from '../components/PhotoUploader';
 import { getPortfolioPath, getProfilePhotoPath } from '../utils/storage';
 import { geocodeAddress } from '../utils/geocoding';
 import { shouldUseMockData } from '../utils/mockDataService';
+import { getAuthenticatorUserId } from '../utils/authUtils';
 import {
   ensureEmailVerificationCodeSent,
   confirmEmailVerificationCode,
@@ -1951,8 +1952,16 @@ export default function ProfessionalOnboard() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Get userId from user object
-      const userId = user?.userId || user?.username || user?.signInDetails?.loginId;
+      if (shouldUseMockData()) {
+        alert(
+          'Profile save needs the real API.\n\n' +
+            'Set VITE_USE_MOCK_DATA=false in .env.local, restart the dev server, then try again.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const userId = getAuthenticatorUserId(user);
       
       if (!userId) {
         throw new Error('User not authenticated');
@@ -2053,8 +2062,9 @@ export default function ProfessionalOnboard() {
       }
 
       const portfolioItems = formData.portfolioItems || [];
-      if (portfolioItems.length < 6) {
-        alert('Please upload at least 6 portfolio photos of your work.');
+      const minPortfolio = Number.parseInt(import.meta.env.VITE_PRO_ONBOARD_MIN_PORTFOLIO || '6', 10) || 6;
+      if (portfolioItems.length < minPortfolio) {
+        alert(`Please upload at least ${minPortfolio} portfolio photos of your work.`);
         setIsSubmitting(false);
         return;
       }
@@ -2092,12 +2102,20 @@ export default function ProfessionalOnboard() {
       if (salonLat == null || salonLng == null) {
         const coords = await geocodeAddress(salonAddress);
         if (!coords) {
-          alert('We couldn\'t verify your salon address. Please check the address and try again.');
-          setIsSubmitting(false);
-          return;
+          const skipGeocode =
+            import.meta.env.DEV || import.meta.env.VITE_SKIP_PRO_GEOCODE === 'true';
+          if (!skipGeocode) {
+            alert('We couldn\'t verify your salon address. Please check the address and try again.');
+            setIsSubmitting(false);
+            return;
+          }
+          console.warn('Geocode failed; submitting professional profile without coordinates.');
+          salonLat = null;
+          salonLng = null;
+        } else {
+          salonLat = coords.lat;
+          salonLng = coords.lng;
         }
-        salonLat = coords.lat;
-        salonLng = coords.lng;
       }
 
       // Map formData to Professional schema
@@ -2192,7 +2210,7 @@ export default function ProfessionalOnboard() {
       }
 
       alert('Application submitted! We\'ll review and get back to you soon.');
-      navigate('/');
+      navigate('/thanks?role=professional&applied=1');
     } catch (error) {
       console.error('Error submitting professional profile:', error);
       const errorMessage = error.errors?.[0]?.message || error.message || 'Something went wrong. Please try again.';
@@ -2227,7 +2245,7 @@ export default function ProfessionalOnboard() {
           <CurrentStepComponent 
             data={formData} 
             setData={setFormData}
-            userId={user?.userId || user?.username || user?.signInDetails?.loginId}
+            userId={getAuthenticatorUserId(user)}
             storageEntityId={storageEntityId}
             onFieldComplete={handleFieldNavigation}
             currentFieldIndex={currentFieldIndex}

@@ -207,3 +207,49 @@ export async function saveProfessionalProfile(userId, formData) {
     throw error;
   }
 }
+
+const mapPartnerToProfile = (partner) => {
+  if (!partner) return null;
+  return {
+    id: partner.id,
+    userId: partner.userId,
+    businessName: partner.businessName,
+    contactName: partner.contactName,
+    email: partner.email,
+    phone: partner.phone,
+    website: partner.website,
+    address: partner.address,
+    city: partner.city,
+    state: partner.state,
+    zip: partner.zip,
+    status: partner.status,
+    somethingFun: partner.somethingFun,
+    salonPhotoUrls: partner.salonPhotoUrls || [],
+    selfPhotoUrls: partner.selfPhotoUrls || [],
+  };
+};
+
+export async function getPartnerProfile(userId) {
+  try {
+    if (!userId) return null;
+
+    if (!shouldUseMockData() && client?.models?.Partner?.list) {
+      try {
+        const { data: partners } = await client.models.Partner.list({
+          filter: { userId: { eq: userId } },
+          limit: 1,
+        });
+        if (partners?.length > 0) {
+          return mapPartnerToProfile(partners[0]);
+        }
+      } catch (dbError) {
+        console.error('[profileService] Database error fetching partner profile:', dbError);
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error loading partner profile:', error);
+    return null;
+  }
+}

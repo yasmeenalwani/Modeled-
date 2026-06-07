@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
+import { getAuthenticatorUserId } from '../utils/authUtils';
+import { shouldUseMockData } from '../utils/mockDataService';
 
 const client = generateClient();
 
@@ -157,12 +159,29 @@ export default function PartnerOnboard() {
     }
   }, [user?.signInDetails?.loginId]);
 
+  useEffect(() => {
+    const selectedRole = localStorage.getItem('selectedRole');
+    if (selectedRole !== 'partner') {
+      localStorage.setItem('intendedRoute', '/onboard/partner');
+      navigate('/join');
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const userId = user?.userId || user?.username || user?.signInDetails?.loginId;
+      if (shouldUseMockData()) {
+        alert(
+          'Profile save needs the real API.\n\n' +
+            'Set VITE_USE_MOCK_DATA=false in .env.local, restart the dev server, then try again.'
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      const userId = getAuthenticatorUserId(user);
       if (!userId) {
         alert('Please sign in to submit your inquiry.');
         setIsSubmitting(false);
@@ -232,7 +251,7 @@ export default function PartnerOnboard() {
 
       await client.models.Partner.create(partnerData);
       alert("Thanks for your interest! We'll be in touch soon.");
-      navigate('/');
+      navigate('/thanks?role=partner&applied=1');
     } catch (error) {
       console.error('Error submitting partner inquiry:', error);
       alert(error?.message || 'Something went wrong. Please try again.');

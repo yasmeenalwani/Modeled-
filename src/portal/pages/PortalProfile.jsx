@@ -5,6 +5,7 @@ import ProCardOnFileSection from '../../components/ProCardOnFileSection';
 import DocumentsCertifications from '../../components/profile/DocumentsCertifications';
 import PublicProfilePreview from '../../components/profile/PublicProfilePreview';
 import { getProfessionalProfile, saveProfessionalProfile } from '../../utils/profileService';
+import { getAuthenticatorUserId } from '../../utils/authUtils';
 import { geocodeAddress } from '../../utils/geocoding';
 import { extractZipFromLocation } from '../../matching/matchingEngine';
 
@@ -573,7 +574,8 @@ export default function PortalProfile() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const profile = await getProfessionalProfile(user?.userId);
+        const authUserId = getAuthenticatorUserId(user);
+        const profile = await getProfessionalProfile(authUserId);
         if (profile) {
           setFormData(prev => ({
             ...prev,
@@ -616,15 +618,16 @@ export default function PortalProfile() {
         locationZip = locationZip || extractZipFromLocation(formData.salonAddress) || null;
       }
 
+      const authUserId = getAuthenticatorUserId(user);
       const payload = {
         ...formData,
-        userId: user?.userId,
+        userId: authUserId,
         email: formData.email || user?.signInDetails?.loginId || user?.username,
         salonLat: salonLat ?? null,
         salonLng: salonLng ?? null,
         locationZip: locationZip ?? null,
       };
-      await saveProfessionalProfile(user?.userId, payload);
+      await saveProfessionalProfile(authUserId, payload);
       alert('Pro Card saved successfully!');
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -1103,7 +1106,7 @@ export default function PortalProfile() {
         onDocumentDelete={handleDocumentDelete}
         onExternalCertAdd={handleExternalCertAdd}
         onExternalCertDelete={handleExternalCertDelete}
-        userId={user?.userId || formData.id}
+        userId={getAuthenticatorUserId(user) || formData.id}
       />
 
       {/* Save Actions */}

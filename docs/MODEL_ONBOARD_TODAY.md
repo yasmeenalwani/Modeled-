@@ -13,13 +13,17 @@ VITE_USE_MOCK_DATA=false
 VITE_BYPASS_ONBOARDING_VERIFICATION=true
 VITE_REQUIRE_ONBOARD_IDENTITY=false
 VITE_SKIP_IDENTITY_VERIFICATION=true
-```
-
-Optional (if beta shell blocks portal after sign-in):
-
-```env
 VITE_FULL_APP_ACCESS=true
 ```
+
+Pro onboard pilot (optional — lowers friction for same-day testing):
+
+```env
+VITE_PRO_ONBOARD_MIN_PORTFOLIO=1
+VITE_SKIP_PRO_GEOCODE=true
+```
+
+Do **not** set `VITE_DEV_SUBMIT_ACTIVE=true` unless you want models to skip the admin queue.
 
 Restart dev server after any env change.
 
@@ -33,7 +37,7 @@ Restart dev server after any env change.
 | 2 | `/onboard/model` — all 10 steps, **3+ photos** upload | |
 | 3 | Submit → alert with **profile ID** → `/thanks?role=model&applied=1` | |
 | 4 | Admin `/admin/onboarding` — new row appears | |
-| 5 | Approve (or dev submit already sets `active`) | |
+| 5 | Approve in `/admin/onboarding` (models submit as `pending` by default) | |
 | 6 | Model `/model-portal/profile` — loads **their** data, not Seraphina demo | |
 
 ---

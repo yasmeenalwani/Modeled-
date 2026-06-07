@@ -6,6 +6,7 @@ import { mockModels } from '../../matching';
 import { mockProfessionals } from '../data/mockProfessionals';
 import ModelDetailModal from '../components/ModelDetailModal';
 import ProfessionalDetailModal from '../components/ProfessionalDetailModal';
+import PartnerDetailModal from '../components/PartnerDetailModal';
 import {
   normalizeApprovalStatus,
   needsAdminReview,
@@ -147,13 +148,29 @@ function mapProfessionalRow(pro) {
   };
 }
 
+function mapPartnerRow(partner) {
+  return {
+    type: 'partner',
+    id: partner.id,
+    record: partner,
+    name: partner.businessName || partner.contactName || 'Unknown',
+    email: partner.email || '',
+    status: partner.status,
+    identityStatus: partner.identityVerificationStatus,
+    phone: partner.phone,
+    salon: [partner.city, partner.state].filter(Boolean).join(', ') || null,
+  };
+}
+
 export default function OnboardingPage() {
   const [activeTab, setActiveTab] = useState('queue');
   const [models, setModels] = useState([]);
   const [professionals, setProfessionals] = useState([]);
+  const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedModel, setSelectedModel] = useState(null);
   const [selectedProfessional, setSelectedProfessional] = useState(null);
+  const [selectedPartner, setSelectedPartner] = useState(null);
 
   const loadQueue = useCallback(async () => {
     setLoading(true);
@@ -182,14 +199,16 @@ export default function OnboardingPage() {
       );
       setModels(mockModelRows.filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus)));
       setProfessionals(mockProRows.filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus)));
+      setPartners([]);
       setLoading(false);
       return;
     }
 
     try {
-      const [modelRes, proRes] = await Promise.all([
+      const [modelRes, proRes, partnerRes] = await Promise.all([
         client.models.ModelProfile.list({ limit: 200 }),
         client.models.Professional.list({ limit: 200 }),
+        client.models.Partner?.list ? client.models.Partner.list({ limit: 200 }) : Promise.resolve({ data: [] }),
       ]);
       const modelRows = (modelRes.data || [])
         .map(mapModelRow)
@@ -197,12 +216,17 @@ export default function OnboardingPage() {
       const proRows = (proRes.data || [])
         .map(mapProfessionalRow)
         .filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus));
+      const partnerRows = (partnerRes.data || [])
+        .map(mapPartnerRow)
+        .filter((r) => needsAdminReview(r.status) || identityNeedsReview(r.identityStatus));
       setModels(modelRows);
       setProfessionals(proRows);
+      setPartners(partnerRows);
     } catch (err) {
       console.error('Review queue load failed:', err);
       setModels([]);
       setProfessionals([]);
+      setPartners([]);
     } finally {
       setLoading(false);
     }
@@ -220,6 +244,8 @@ export default function OnboardingPage() {
         await client.models.ModelProfile.update({ id: row.id, status: nextStatus });
       } else if (row.type === 'professional' && client.models.Professional) {
         await client.models.Professional.update({ id: row.id, status: nextStatus });
+      } else if (row.type === 'partner' && client.models.Partner) {
+        await client.models.Partner.update({ id: row.id, status: nextStatus });
       }
       await loadQueue();
     } catch (err) {
@@ -228,26 +254,33 @@ export default function OnboardingPage() {
     }
   };
 
+  const allRows = [...models, ...professionals, ...partners];
   const queue =
     activeTab === 'models'
       ? models
       : activeTab === 'professionals'
         ? professionals
-        : [...models, ...professionals].sort((a, b) => a.name.localeCompare(b.name));
+        : activeTab === 'partners'
+          ? partners
+          : allRows.sort((a, b) => a.name.localeCompare(b.name));
 
   const stats = {
     modelsPending: models.length,
     prosPending: professionals.length,
-    identityReview: [...models, ...professionals].filter((r) => identityNeedsReview(r.identityStatus)).length,
-    total: models.length + professionals.length,
+    partnersPending: partners.length,
+    identityReview: allRows.filter((r) => identityNeedsReview(r.identityStatus)).length,
+    total: allRows.length,
   };
 
   const openRow = (row) => {
+    setSelectedModel(null);
+    setSelectedProfessional(null);
+    setSelectedPartner(null);
     if (row.type === 'model') {
-      setSelectedProfessional(null);
       setSelectedModel(row.record);
+    } else if (row.type === 'partner') {
+      setSelectedPartner(row.record);
     } else {
-      setSelectedModel(null);
       setSelectedProfessional(row.record);
     }
   };
@@ -257,7 +290,7 @@ export default function OnboardingPage() {
       <div style={styles.header}>
         <h1 style={styles.title}>Review Queue</h1>
         <p style={styles.subtitle}>
-          Approve new models and professionals after onboarding. Identity verification can be completed here while SES is pending.
+          Approve new models, professionals, and partners after onboarding. Identity verification can be completed here while SES is pending.
         </p>
       </div>
 
@@ -275,8 +308,15 @@ export default function OnboardingPage() {
           <div style={styles.statLabel}>Professionals</div>
         </div>
         <div style={styles.statCard}>
-          <div style={{ ...styles.statValue, color: '#ffc107' }}>{stats.identityReview}</div>
-          <div style={styles.statLabel}>ID / selfie review</div>
+          <div style={{ ...styles.statValue, color: '#d29922' }}>{stats.partnersPending}</div>
+          <div style={styles.statLabel}>Partners</div>
+        </div>
+      </div>
+
+      <div style={{ ...styles.statsRow, gridTemplateColumns: '1fr', marginTop: '-0.5rem', marginBottom: '1.5rem' }}>
+        <div style={styles.statCard}>
+          <div style={{ ...styles.statValue, color: '#ffc107', fontSize: '1.25rem' }}>{stats.identityReview}</div>
+          <div style={styles.statLabel}>ID / selfie review across queue</div>
         </div>
       </div>
 
@@ -285,6 +325,7 @@ export default function OnboardingPage() {
           { id: 'queue', label: `All (${stats.total})` },
           { id: 'models', label: `Models (${stats.modelsPending})` },
           { id: 'professionals', label: `Professionals (${stats.prosPending})` },
+          { id: 'partners', label: `Partners (${stats.partnersPending})` },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -319,8 +360,18 @@ export default function OnboardingPage() {
               <span
                 style={{
                   ...styles.typeBadge,
-                  background: row.type === 'model' ? 'rgba(233,69,96,0.2)' : 'rgba(102,126,234,0.2)',
-                  color: row.type === 'model' ? '#e94560' : '#667eea',
+                  background:
+                    row.type === 'model'
+                      ? 'rgba(233,69,96,0.2)'
+                      : row.type === 'partner'
+                        ? 'rgba(210,153,34,0.2)'
+                        : 'rgba(102,126,234,0.2)',
+                  color:
+                    row.type === 'model'
+                      ? '#e94560'
+                      : row.type === 'partner'
+                        ? '#d29922'
+                        : '#667eea',
                 }}
               >
                 {row.type}
@@ -364,6 +415,8 @@ export default function OnboardingPage() {
         {' · '}
         <Link to="/admin/professionals" style={{ color: '#667eea' }}>Professionals</Link>
         {' · '}
+        <Link to="/admin/salons" style={{ color: '#d29922' }}>Partners / Salons</Link>
+        {' · '}
         <Link to="/admin/training" style={{ color: 'rgba(255,255,255,0.6)' }}>Training program</Link>
       </p>
 
@@ -383,6 +436,16 @@ export default function OnboardingPage() {
           onClose={() => setSelectedProfessional(null)}
           onUpdate={() => {
             setSelectedProfessional(null);
+            loadQueue();
+          }}
+        />
+      )}
+      {selectedPartner && (
+        <PartnerDetailModal
+          partner={selectedPartner}
+          onClose={() => setSelectedPartner(null)}
+          onUpdate={() => {
+            setSelectedPartner(null);
             loadQueue();
           }}
         />

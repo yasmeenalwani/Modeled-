@@ -2480,7 +2480,7 @@ export default function ModelOnboard() {
       
       const openFlags = mapServicePreferencesToOpenFlags(formData.servicePreferences);
       const profileStatus = normalizeDeployedProfileStatus(
-        import.meta.env.DEV ? 'active' : 'pending',
+        import.meta.env.VITE_DEV_SUBMIT_ACTIVE === 'true' ? 'active' : 'pending',
         'pending'
       );
 
