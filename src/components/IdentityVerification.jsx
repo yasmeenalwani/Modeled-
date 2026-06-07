@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { uploadData, getUrl } from 'aws-amplify/storage';
 import { post } from 'aws-amplify/api';
 import outputs from '../../amplify_outputs.json';
 import { shouldUseMockData } from '../utils/mockDataService';
+import { uploadIdentityVerificationFile } from '../utils/identityVerificationUpload';
+import { toS3StorageKey } from '../utils/s3StorageKey';
 
 const IDENTITY_VERIFICATION_API = outputs?.custom?.API?.identityVerificationApi?.apiName || 'identityVerificationApi';
 
@@ -198,9 +199,15 @@ export default function IdentityVerification({
   existingData = {} 
 }) {
   const [idDocument, setIdDocument] = useState(null);
+  const [idDocumentKey, setIdDocumentKey] = useState(
+    () => toS3StorageKey(existingData.idDocumentUrl) || existingData.idDocumentUrl || null,
+  );
   const [idDocumentUrl, setIdDocumentUrl] = useState(existingData.idDocumentUrl || null);
   const [idDocumentType, setIdDocumentType] = useState(existingData.idDocumentType || '');
   const [selfie, setSelfie] = useState(null);
+  const [selfieKey, setSelfieKey] = useState(
+    () => toS3StorageKey(existingData.verificationSelfieUrl) || existingData.verificationSelfieUrl || null,
+  );
   const [selfieUrl, setSelfieUrl] = useState(existingData.verificationSelfieUrl || null);
   const [verifying, setVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
@@ -280,6 +287,10 @@ export default function IdentityVerification({
 
   const handleIdUpload = async (file) => {
     if (!file) return;
+    if (!userId && !useMockOrDev) {
+      alert('Still preparing secure upload. Wait a moment and try again.');
+      return;
+    }
     setUploadProgress(prev => ({ ...prev, id: 0 }));
     try {
       if (useMockOrDev) {
@@ -288,22 +299,13 @@ export default function IdentityVerification({
         setUploadProgress(prev => ({ ...prev, id: 100 }));
         return;
       }
-      const timestamp = Date.now();
-      const ext = file.name.split('.').pop();
-      const path = `identity-verification/${userType}s/${userId}/id-${timestamp}.${ext}`;
-      await uploadData({
-        path,
-        data: file,
-        options: {
-          contentType: file.type,
-          onProgress: ({ transferredBytes, totalBytes }) => {
-            const pct = totalBytes ? Math.round((transferredBytes / totalBytes) * 100) : 0;
-            setUploadProgress(prev => ({ ...prev, id: pct }));
-          },
-        },
-      }).result;
-      const urlResult = await getUrl({ path });
-      setIdDocumentUrl(urlResult.url.toString());
+      const { key, url } = await uploadIdentityVerificationFile(file, {
+        userType,
+        userId,
+        kind: 'id',
+      });
+      setIdDocumentKey(key);
+      setIdDocumentUrl(url);
       setIdDocument(file);
       setUploadProgress(prev => ({ ...prev, id: 100 }));
     } catch (error) {
@@ -313,13 +315,17 @@ export default function IdentityVerification({
         setIdDocument(file);
         setUploadProgress(prev => ({ ...prev, id: 100 }));
       } else {
-        alert('Failed to upload ID. Please try again.');
+        alert(`Failed to upload ID: ${error?.message || 'Please try again.'}`);
       }
     }
   };
 
   const handleSelfieUpload = async (file) => {
     if (!file) return;
+    if (!userId && !useMockOrDev) {
+      alert('Still preparing secure upload. Wait a moment and try again.');
+      return;
+    }
     setUploadProgress(prev => ({ ...prev, selfie: 0 }));
     try {
       if (useMockOrDev) {
@@ -328,22 +334,13 @@ export default function IdentityVerification({
         setUploadProgress(prev => ({ ...prev, selfie: 100 }));
         return;
       }
-      const timestamp = Date.now();
-      const ext = file.name.split('.').pop();
-      const path = `identity-verification/${userType}s/${userId}/selfie-${timestamp}.${ext}`;
-      await uploadData({
-        path,
-        data: file,
-        options: {
-          contentType: file.type,
-          onProgress: ({ transferredBytes, totalBytes }) => {
-            const pct = totalBytes ? Math.round((transferredBytes / totalBytes) * 100) : 0;
-            setUploadProgress(prev => ({ ...prev, selfie: pct }));
-          },
-        },
-      }).result;
-      const urlResult = await getUrl({ path });
-      setSelfieUrl(urlResult.url.toString());
+      const { key, url } = await uploadIdentityVerificationFile(file, {
+        userType,
+        userId,
+        kind: 'selfie',
+      });
+      setSelfieKey(key);
+      setSelfieUrl(url);
       setSelfie(file);
       setUploadProgress(prev => ({ ...prev, selfie: 100 }));
     } catch (error) {
@@ -353,9 +350,22 @@ export default function IdentityVerification({
         setSelfie(file);
         setUploadProgress(prev => ({ ...prev, selfie: 100 }));
       } else {
-        alert('Failed to upload selfie. Please try again.');
+        alert(`Failed to upload selfie: ${error?.message || 'Please try again.'}`);
       }
     }
+  };
+
+  const parseVerificationApiError = async (error) => {
+    try {
+      const body = error?.response?.body ?? error?.body;
+      if (body) {
+        const parsed = typeof body.json === 'function' ? await body.json() : JSON.parse(String(body));
+        return parsed?.message || parsed?.error || error?.message;
+      }
+    } catch {
+      /* ignore */
+    }
+    return error?.message;
   };
 
   const handleVerify = async () => {
@@ -366,6 +376,13 @@ export default function IdentityVerification({
 
     if (!idDocumentType) {
       alert('Please select your ID document type.');
+      return;
+    }
+
+    const idKey = idDocumentKey || toS3StorageKey(idDocumentUrl);
+    const selfieStorageKey = selfieKey || toS3StorageKey(selfieUrl);
+    if (!useMockOrDev && (!idKey || !selfieStorageKey)) {
+      alert('Could not read uploaded files. Please re-upload your ID and selfie.');
       return;
     }
 
@@ -382,9 +399,9 @@ export default function IdentityVerification({
         });
         if (onVerificationComplete) {
           onVerificationComplete({
-            idDocumentUrl,
+            idDocumentUrl: idKey || idDocumentUrl,
             idDocumentType,
-            verificationSelfieUrl: selfieUrl,
+            verificationSelfieUrl: selfieStorageKey || selfieUrl,
             identityVerificationStatus: 'manual_review',
             identityVerificationScore: 100,
             identityVerified: true,
@@ -398,8 +415,8 @@ export default function IdentityVerification({
         path: '/verify-identity',
         options: {
           body: {
-            idDocumentUrl,
-            selfieUrl,
+            idDocumentUrl: idKey,
+            selfieUrl: selfieStorageKey,
             idDocumentType,
             userType,
             userId,
@@ -422,9 +439,9 @@ export default function IdentityVerification({
 
       if (onVerificationComplete) {
         onVerificationComplete({
-          idDocumentUrl,
+          idDocumentUrl: idKey,
           idDocumentType,
-          verificationSelfieUrl: selfieUrl,
+          verificationSelfieUrl: selfieStorageKey,
           identityVerificationStatus: result.status || (result.verified ? 'verified' : result.confidence >= 60 ? 'manual_review' : 'failed'),
           identityVerificationScore: result.confidence,
           identityVerified: result.verified,
@@ -450,7 +467,7 @@ export default function IdentityVerification({
           });
         }
       } else {
-        const serverMessage = error?.body?.message ?? error?.response?.data?.message ?? error?.message;
+        const serverMessage = await parseVerificationApiError(error);
         setVerificationResult({
           verified: false,
           confidence: 0,
@@ -459,9 +476,9 @@ export default function IdentityVerification({
         });
         if (onVerificationComplete) {
           onVerificationComplete({
-            idDocumentUrl,
+            idDocumentUrl: idKey,
             idDocumentType,
-            verificationSelfieUrl: selfieUrl,
+            verificationSelfieUrl: selfieStorageKey,
             identityVerificationStatus: 'failed',
             identityVerificationScore: 0,
             identityVerified: false,
@@ -473,7 +490,7 @@ export default function IdentityVerification({
     }
   };
 
-  const canVerify = idDocumentUrl && selfieUrl && idDocumentType && !verifying;
+  const canVerify = idDocumentUrl && selfieUrl && idDocumentType && !verifying && (userId || useMockOrDev);
 
   return (
     <div style={styles.container}>
@@ -481,6 +498,12 @@ export default function IdentityVerification({
       <p style={styles.subtitle}>
         We need to verify your identity to ensure safety and security. Please upload a government-issued ID and take a selfie.
       </p>
+
+      {!userId && !useMockOrDev && (
+        <p style={{ color: '#8B1E3F', fontSize: '0.9rem', marginBottom: '1rem' }}>
+          Preparing secure upload… wait a moment before uploading.
+        </p>
+      )}
 
       {/* ID Document Upload */}
       <div style={styles.section}>

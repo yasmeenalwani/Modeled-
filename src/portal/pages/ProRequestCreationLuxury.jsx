@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import PhotoUploader from '../../components/PhotoUploader';
 import TagSearchBar from '../../components/TagSearchBar';

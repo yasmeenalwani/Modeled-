@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut } from 'aws-amplify/auth';
+import { usePortalBasePath } from '../hooks/usePortalBasePath';
+import { useDemoPortal } from '../context/DemoAuthContext';
+import { usePortalAuth } from '../hooks/usePortalAuth';
 import InactivityLogout from '../components/InactivityLogout.jsx';
 import PortalStatusGate from '../components/PortalStatusGate.jsx';
 
@@ -284,10 +287,21 @@ const salonData = {
 
 export default function PartnerPortalLayout() {
   const navigate = useNavigate();
+  const demo = useDemoPortal();
+  const { signOut: portalSignOut } = usePortalAuth();
+  const basePath = usePortalBasePath('/partner-portal');
+  const navSections = buildPartnerNavSections(basePath);
+  const displaySalon = demo?.display?.salonName
+    ? { ...salonData, name: demo.display.salonName }
+    : salonData;
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleSignOut = async () => {
+    if (demo) {
+      portalSignOut();
+      return;
+    }
     await signOut();
     navigate('/');
   };
@@ -311,7 +325,18 @@ export default function PartnerPortalLayout() {
   return (
     <PortalStatusGate userType="partner">
     <div style={styles.container}>
-      <InactivityLogout timeoutMinutes={30} redirectTo="/" />
+      {!demo && <InactivityLogout timeoutMinutes={30} redirectTo="/" />}
+      {demo && (
+        <div style={{
+          background: '#8B1E3F',
+          color: '#E8D5B5',
+          padding: '0.4rem 1rem',
+          fontSize: '0.8rem',
+          textAlign: 'center',
+        }}>
+          Demo mode — <a href="/demo" style={{ color: '#fff', marginLeft: '0.5rem' }}>All demos</a>
+        </div>
+      )}
 
       {/* Mobile top bar */}
       {isMobile && (
@@ -392,29 +417,29 @@ export default function PartnerPortalLayout() {
         {/* Salon Profile */}
         <div style={styles.salonSection}>
           <div style={styles.salonLogo}>LS</div>
-          <div style={styles.salonName}>{salonData.name}</div>
-          <div style={styles.salonLocation}>{salonData.location}</div>
+          <div style={styles.salonName}>{displaySalon.name}</div>
+          <div style={styles.salonLocation}>{displaySalon.location}</div>
           <span style={styles.salonStatus}>
-            {salonData.status}
+            {displaySalon.status}
           </span>
         </div>
 
         {/* Quick Metrics */}
         <div style={styles.quickMetrics}>
           <div style={styles.metric}>
-            <div style={styles.metricValue}>{salonData.teamSize}</div>
+            <div style={styles.metricValue}>{displaySalon.teamSize}</div>
             <div style={styles.metricLabel}>Team Members</div>
           </div>
           <div style={styles.metric}>
-            <div style={{ ...styles.metricValue, color: '#8B1E3F' }}>{salonData.activeApps}</div>
+            <div style={{ ...styles.metricValue, color: '#8B1E3F' }}>{displaySalon.activeApps}</div>
             <div style={styles.metricLabel}>Pending</div>
           </div>
           <div style={styles.metric}>
-            <div style={{ ...styles.metricValue, color: '#4caf50' }}>{salonData.conversions}</div>
+            <div style={{ ...styles.metricValue, color: '#4caf50' }}>{displaySalon.conversions}</div>
             <div style={styles.metricLabel}>Conversions</div>
           </div>
           <div style={styles.metric}>
-            <div style={{ ...styles.metricValue, color: '#ffc107' }}>{salonData.rating}</div>
+            <div style={{ ...styles.metricValue, color: '#ffc107' }}>{displaySalon.rating}</div>
             <div style={styles.metricLabel}>Rating</div>
           </div>
         </div>

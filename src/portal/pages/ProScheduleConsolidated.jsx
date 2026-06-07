@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { useNavigate } from 'react-router-dom';
 import { getBookingsForUser } from '../../utils/bookingFlow';
 import { getServiceById } from '../../admin/data/services';

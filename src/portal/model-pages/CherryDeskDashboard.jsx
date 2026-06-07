@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { getPhotoForService, handleImageError } from '../../utils/imageHelpers';
 
 // Shared mock data (would come from API in production)

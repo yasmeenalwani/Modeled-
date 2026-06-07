@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import PhotoUploader from '../../components/PhotoUploader';
 import { getProfilePhotoPath } from '../../utils/storage';
 import { getMockModel, shouldUseMockData } from '../../utils/mockDataService';

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import ProCardOverview from '../../components/profile/ProCardOverview';
 import ProCardOnFileSection from '../../components/ProCardOnFileSection';
 import DocumentsCertifications from '../../components/profile/DocumentsCertifications';

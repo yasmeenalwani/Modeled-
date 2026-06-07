@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { getRequestsForProfessional } from '../../utils/requestService';
 import { getMatchesForRequest } from '../../utils/matchService';
 import { getModelById } from '../../utils/profileService';

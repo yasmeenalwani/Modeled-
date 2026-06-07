@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { trainingCategories, practiceFocusTargets, mapServiceToFocus } from '../data/trainingData';
 import { getBookingsForUser } from '../../utils/bookingService';
 

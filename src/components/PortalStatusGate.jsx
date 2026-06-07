@@ -4,6 +4,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { generateClient } from 'aws-amplify/data';
 import { shouldUseMockData } from '../utils/mockDataService';
 import { getAuthenticatorUserId } from '../utils/authUtils';
+import { isDemoPortalActive } from '../utils/demoPortalMode';
 
 const client = generateClient();
 
@@ -84,6 +85,11 @@ export default function PortalStatusGate({ userType, children }) {
   const userId = getAuthenticatorUserId(user);
 
   useEffect(() => {
+    if (isDemoPortalActive()) {
+      setLoading(false);
+      setStatus('active');
+      return;
+    }
     const mockMode = shouldUseMockData();
     const devMode = import.meta.env.DEV;
     if (!userId || mockMode || devMode) {

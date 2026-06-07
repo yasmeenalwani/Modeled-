@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import PhotoUploader from '../../components/PhotoUploader';
 import { deleteFile, getPortfolioPath } from '../../utils/storage';
 import { shouldUseMockData, getMockProfessionalByUserId } from '../../utils/mockDataService';

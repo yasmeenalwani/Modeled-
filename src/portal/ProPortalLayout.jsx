@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut } from 'aws-amplify/auth';
+import { usePortalBasePath } from '../hooks/usePortalBasePath';
+import { useDemoPortal } from '../context/DemoAuthContext';
+import { usePortalAuth } from '../hooks/usePortalAuth';
 import InactivityLogout from '../components/InactivityLogout.jsx';
 import PortalStatusGate from '../components/PortalStatusGate.jsx';
 
@@ -197,43 +200,43 @@ const styles = {
   },
 };
 
-// Navigation items - Core MVP focus (Dashboard & Education hidden for later roadmap)
-const navItems = [
+function buildProNavItems(base) {
+  return [
   { 
-    path: '/portal/profile', 
+    path: `${base}/profile`, 
     icon: '', 
     label: 'Pro Card',
     end: true,
     description: 'Professional Card, Services & Certifications'
   },
   { 
-    path: '/portal/matching', 
+    path: `${base}/matching`, 
     icon: '', 
     label: 'Matched',
     description: 'Matches & Requests',
     color: '#8B1E3F'
   },
   { 
-    path: '/portal/portfolio', 
+    path: `${base}/portfolio`, 
     icon: '', 
     label: 'Looks',
     description: 'Sessions & Inspiration'
   },
   {
-    path: '/portal/education',
+    path: `${base}/education`,
     icon: '',
     label: 'Education',
     description: 'Training, classes & resources',
   },
   {
-    path: '/portal/shop',
+    path: `${base}/shop`,
     icon: '',
     label: 'Pro Shop',
     description: 'Tools, Supplies & Brands',
   },
   // Hidden for later: Dashboard (cherry desk, training videos)
-  // { path: '/portal', label: 'Dashboard', ... },
-];
+  ];
+}
 
 // Mock current user (would come from auth)
 const currentUser = {
@@ -249,15 +252,35 @@ const currentUser = {
 
 export default function ProPortalLayout() {
   const navigate = useNavigate();
+  const demo = useDemoPortal();
+  const { signOut: portalSignOut } = usePortalAuth();
+  const basePath = usePortalBasePath('/portal');
+  const navItems = buildProNavItems(basePath);
+  const displayUser = demo?.display
+    ? {
+        firstName: demo.display.firstName,
+        lastName: demo.display.lastName,
+        salon: demo.display.salonName || 'Luxe Studio',
+        status: 'Active',
+        trainingHours: 730,
+        totalHours: 800,
+        rating: 4.9,
+        tipsThisMonth: 485,
+      }
+    : currentUser;
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleSignOut = async () => {
+    if (demo) {
+      portalSignOut();
+      return;
+    }
     await signOut();
     navigate('/');
   };
 
-  const trainingPct = Math.round((currentUser.trainingHours / currentUser.totalHours) * 100);
+  const trainingPct = Math.round((displayUser.trainingHours / displayUser.totalHours) * 100);
 
   const sidebarStyle = isMobile
     ? {
@@ -278,7 +301,18 @@ export default function ProPortalLayout() {
   return (
     <PortalStatusGate userType="professional">
     <div style={styles.container}>
-      <InactivityLogout timeoutMinutes={30} redirectTo="/" />
+      {!demo && <InactivityLogout timeoutMinutes={30} redirectTo="/" />}
+      {demo && (
+        <div style={{
+          background: '#8B1E3F',
+          color: '#E8D5B5',
+          padding: '0.4rem 1rem',
+          fontSize: '0.8rem',
+          textAlign: 'center',
+        }}>
+          Demo mode — <a href="/demo" style={{ color: '#fff', marginLeft: '0.5rem' }}>All demos</a>
+        </div>
+      )}
 
       {/* Mobile top bar */}
       {isMobile && (
@@ -335,14 +369,14 @@ export default function ProPortalLayout() {
         {/* User Profile */}
         <div style={styles.userSection}>
           <div style={styles.userAvatar}>
-            {currentUser.firstName.charAt(0)}
+            {displayUser.firstName.charAt(0)}
           </div>
           <div style={styles.userName}>
-            {currentUser.firstName} {currentUser.lastName}
+            {displayUser.firstName} {displayUser.lastName}
           </div>
-          <div style={styles.userSalon}>{currentUser.salon}</div>
+          <div style={styles.userSalon}>{displayUser.salon}</div>
           <div style={styles.userStatus}>
-            <span style={styles.statusBadge}>{currentUser.status}</span>
+            <span style={styles.statusBadge}>{displayUser.status}</span>
           </div>
         </div>
 
@@ -353,15 +387,15 @@ export default function ProPortalLayout() {
             <div style={styles.quickStatLabel}>Training</div>
           </div>
           <div style={styles.quickStat}>
-            <div style={{ ...styles.quickStatValue, color: '#D4858A' }}>{currentUser.rating}</div>
+            <div style={{ ...styles.quickStatValue, color: '#D4858A' }}>{displayUser.rating}</div>
             <div style={styles.quickStatLabel}>Rating</div>
           </div>
           <div style={styles.quickStat}>
-            <div style={{ ...styles.quickStatValue, color: '#4caf50' }}>${currentUser.tipsThisMonth}</div>
+            <div style={{ ...styles.quickStatValue, color: '#4caf50' }}>${displayUser.tipsThisMonth}</div>
             <div style={styles.quickStatLabel}>Tips (Dec)</div>
           </div>
           <div style={styles.quickStat}>
-            <div style={styles.quickStatValue}>{currentUser.trainingHours}</div>
+            <div style={styles.quickStatValue}>{displayUser.trainingHours}</div>
             <div style={styles.quickStatLabel}>Hours</div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import PhotoUploader from '../../components/PhotoUploader';
 import VideoUploader from '../../components/VideoUploader';
 import ModelAvailabilityCalendar from '../../components/ModelAvailabilityCalendar';

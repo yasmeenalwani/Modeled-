@@ -6,6 +6,7 @@
  */
 
 import { generateClient } from 'aws-amplify/data';
+import { isDemoPortalActive } from './demoPortalMode';
 
 const MOCK_STORAGE_KEY = 'modeled_mock_data';
 const MOCK_DATA_VERSION = 6; // bump so Seraphina gets seed matches in Matched page (fresh localStorage)
@@ -989,6 +990,7 @@ export function clearMockData() {
  * Check if we should use mock data (when database is unavailable)
  */
 export function shouldUseMockData() {
+  if (isDemoPortalActive()) return true;
   const override = import.meta?.env?.VITE_USE_MOCK_DATA;
   if (typeof override === 'string') return override.toLowerCase() === 'true';
 

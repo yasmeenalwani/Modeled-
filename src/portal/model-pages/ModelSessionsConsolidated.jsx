@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { getServiceById, formatDuration } from '../../admin/data/services';
 import PhotoUploader from '../../components/PhotoUploader';
 import GalleryTagFilter from '../../components/GalleryTagFilter';

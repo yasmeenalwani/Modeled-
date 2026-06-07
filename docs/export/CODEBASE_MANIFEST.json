@@ -1,0 +1,1878 @@
+{
+  "generatedAt": "2026-06-07T13:25:11.939Z",
+  "repo": "modeled-frontend",
+  "totals": {
+    "sourceFiles": 351,
+    "sourceLines": 134529,
+    "adminPages": 43,
+    "lambdaHandlers": 16,
+    "schemaLines": 1325
+  },
+  "byArea": {
+    "src/pages": {
+      "files": 15,
+      "lines": 8803
+    },
+    "src/portal": {
+      "files": 63,
+      "lines": 45100
+    },
+    "src/matching": {
+      "files": 6,
+      "lines": 2375
+    },
+    "src/utils": {
+      "files": 81,
+      "lines": 17634
+    },
+    "amplify/data": {
+      "files": 1,
+      "lines": 1325
+    },
+    "src/admin": {
+      "files": 73,
+      "lines": 30745
+    },
+    "amplify/functions": {
+      "files": 34,
+      "lines": 6370
+    },
+    "src/components": {
+      "files": 53,
+      "lines": 18007
+    },
+    "src/data": {
+      "files": 1,
+      "lines": 893
+    },
+    "scripts/generate-portal-data-catalog.js": {
+      "files": 1,
+      "lines": 733
+    },
+    "src/App.jsx": {
+      "files": 1,
+      "lines": 578
+    },
+    "amplify/monitoring": {
+      "files": 3,
+      "lines": 460
+    },
+    "scripts/test-booking-flow.js": {
+      "files": 1,
+      "lines": 232
+    },
+    "amplify/backend.ts": {
+      "files": 1,
+      "lines": 192
+    },
+    "amplify/storage": {
+      "files": 3,
+      "lines": 256
+    },
+    "scripts/generate-appsync-schema.js": {
+      "files": 1,
+      "lines": 146
+    },
+    "scripts/backfillProfessionalGeocoding.js": {
+      "files": 1,
+      "lines": 105
+    },
+    "amplify/analytics": {
+      "files": 1,
+      "lines": 98
+    },
+    "src/main.jsx": {
+      "files": 1,
+      "lines": 84
+    },
+    "scripts/buildZipCentroids.js": {
+      "files": 1,
+      "lines": 78
+    },
+    "amplify/eventbridge": {
+      "files": 1,
+      "lines": 51
+    },
+    "amplify/auth": {
+      "files": 1,
+      "lines": 50
+    },
+    "amplify/notifications": {
+      "files": 1,
+      "lines": 50
+    },
+    "src/hooks": {
+      "files": 3,
+      "lines": 79
+    },
+    "src/MODELEDMGMTCODE.jsx": {
+      "files": 1,
+      "lines": 36
+    },
+    "amplify/amplify-env.d.ts": {
+      "files": 1,
+      "lines": 25
+    },
+    "src/context": {
+      "files": 1,
+      "lines": 24
+    }
+  },
+  "files": [
+    {
+      "path": "src/pages/ModelOnboard.jsx",
+      "lines": 2742,
+      "bytes": 94486
+    },
+    {
+      "path": "src/pages/ProfessionalOnboard.jsx",
+      "lines": 2268,
+      "bytes": 79503
+    },
+    {
+      "path": "src/portal/pages/PortalDashboard.jsx",
+      "lines": 1842,
+      "bytes": 62624
+    },
+    {
+      "path": "src/portal/model-pages/ModelBookedCalendar.jsx",
+      "lines": 1760,
+      "bytes": 63297
+    },
+    {
+      "path": "src/portal/model-pages/ModelProfile.jsx",
+      "lines": 1753,
+      "bytes": 56709
+    },
+    {
+      "path": "src/portal/pages/BookedPageDesignDemo.jsx",
+      "lines": 1643,
+      "bytes": 53605
+    },
+    {
+      "path": "src/matching/matchingEngine.js",
+      "lines": 1624,
+      "bytes": 56527
+    },
+    {
+      "path": "src/utils/matchService.js",
+      "lines": 1560,
+      "bytes": 52576
+    },
+    {
+      "path": "src/portal/pages/ProPortfolioConsolidated.jsx",
+      "lines": 1499,
+      "bytes": 44518
+    },
+    {
+      "path": "src/portal/model-pages/ModelSessionsConsolidated.jsx",
+      "lines": 1475,
+      "bytes": 57650
+    },
+    {
+      "path": "src/portal/model-pages/CherryDeskDashboard.jsx",
+      "lines": 1465,
+      "bytes": 49332
+    },
+    {
+      "path": "src/portal/pages/ProRequestCreationLuxury.jsx",
+      "lines": 1441,
+      "bytes": 52862
+    },
+    {
+      "path": "src/portal/pages/BookedCalendarGoogleStyle.jsx",
+      "lines": 1399,
+      "bytes": 49098
+    },
+    {
+      "path": "amplify/data/resource.ts",
+      "lines": 1325,
+      "bytes": 52642
+    },
+    {
+      "path": "src/portal/pages/ProBooked.jsx",
+      "lines": 1316,
+      "bytes": 47973
+    },
+    {
+      "path": "src/admin/pages/MatchEnginePage.jsx",
+      "lines": 1276,
+      "bytes": 49742
+    },
+    {
+      "path": "src/portal/pages/BookedCalendarViewsDemo.jsx",
+      "lines": 1229,
+      "bytes": 44384
+    },
+    {
+      "path": "src/portal/pages/PortalProfile.jsx",
+      "lines": 1188,
+      "bytes": 40359
+    },
+    {
+      "path": "src/portal/pages/BookedCalendarRefined.jsx",
+      "lines": 1161,
+      "bytes": 45099
+    },
+    {
+      "path": "src/admin/pages/MatchApprovalPage.jsx",
+      "lines": 1124,
+      "bytes": 39015
+    },
+    {
+      "path": "src/admin/components/ModelDetailModal.jsx",
+      "lines": 1122,
+      "bytes": 39004
+    },
+    {
+      "path": "src/portal/model-pages/ModelOpportunities.jsx",
+      "lines": 1111,
+      "bytes": 37019
+    },
+    {
+      "path": "src/portal/pages/BookedCalendarDesignDemo.jsx",
+      "lines": 1069,
+      "bytes": 37333
+    },
+    {
+      "path": "src/utils/mockDataService.js",
+      "lines": 1045,
+      "bytes": 36765
+    },
+    {
+      "path": "src/utils/bookingService.js",
+      "lines": 1042,
+      "bytes": 36404
+    },
+    {
+      "path": "src/admin/pages/RequestsPage.jsx",
+      "lines": 962,
+      "bytes": 32544
+    },
+    {
+      "path": "src/admin/pages/CRMPage.jsx",
+      "lines": 946,
+      "bytes": 31527
+    },
+    {
+      "path": "src/portal/pages/PortalEarnings.jsx",
+      "lines": 919,
+      "bytes": 30481
+    },
+    {
+      "path": "amplify/functions/photo-analysis/beautyAttributeMapper.ts",
+      "lines": 912,
+      "bytes": 30028
+    },
+    {
+      "path": "src/components/portfolio/MagazinePortfolio.jsx",
+      "lines": 893,
+      "bytes": 27945
+    },
+    {
+      "path": "src/data/mockModelsWithAnalysis.js",
+      "lines": 893,
+      "bytes": 24112
+    },
+    {
+      "path": "src/portal/pages/ProMatching.jsx",
+      "lines": 862,
+      "bytes": 31901
+    },
+    {
+      "path": "src/portal/pages/ProScheduleConsolidated.jsx",
+      "lines": 861,
+      "bytes": 28306
+    },
+    {
+      "path": "src/admin/pages/PackagesPage.jsx",
+      "lines": 846,
+      "bytes": 28453
+    },
+    {
+      "path": "src/components/GuidedPhotoCapture.jsx",
+      "lines": 846,
+      "bytes": 24405
+    },
+    {
+      "path": "src/admin/pages/ModelsPage.jsx",
+      "lines": 834,
+      "bytes": 27009
+    },
+    {
+      "path": "src/admin/pages/ProfessionalsPage.jsx",
+      "lines": 830,
+      "bytes": 27260
+    },
+    {
+      "path": "amplify/functions/photo-analysis/attributeMapper.ts",
+      "lines": 817,
+      "bytes": 29586
+    },
+    {
+      "path": "src/admin/pages/MatchCriteriaPage.jsx",
+      "lines": 813,
+      "bytes": 31927
+    },
+    {
+      "path": "src/portal/pages/BookingCompletion.jsx",
+      "lines": 809,
+      "bytes": 24418
+    },
+    {
+      "path": "src/admin/pages/TrendsPage.jsx",
+      "lines": 802,
+      "bytes": 26647
+    },
+    {
+      "path": "src/portal/pages/ProShop.jsx",
+      "lines": 800,
+      "bytes": 25988
+    },
+    {
+      "path": "src/admin/pages/CalendarPage.jsx",
+      "lines": 795,
+      "bytes": 26529
+    },
+    {
+      "path": "src/components/IdentityVerification.jsx",
+      "lines": 791,
+      "bytes": 25973
+    },
+    {
+      "path": "src/admin/components/ProfessionalDetailModal.jsx",
+      "lines": 780,
+      "bytes": 28736
+    },
+    {
+      "path": "src/admin/pages/Dashboard.jsx",
+      "lines": 773,
+      "bytes": 24380
+    },
+    {
+      "path": "src/pages/DemoAnalysisSystem.jsx",
+      "lines": 755,
+      "bytes": 25241
+    },
+    {
+      "path": "src/admin/pages/OnboardingAnalyticsPage.jsx",
+      "lines": 735,
+      "bytes": 24491
+    },
+    {
+      "path": "src/admin/pages/RevenuePage.jsx",
+      "lines": 735,
+      "bytes": 23987
+    },
+    {
+      "path": "scripts/generate-portal-data-catalog.js",
+      "lines": 733,
+      "bytes": 65381
+    },
+    {
+      "path": "src/portal/model-pages/ModelRole.jsx",
+      "lines": 724,
+      "bytes": 25054
+    },
+    {
+      "path": "src/admin/pages/ChatManagementPage.jsx",
+      "lines": 721,
+      "bytes": 21959
+    },
+    {
+      "path": "amplify/functions/photo-analysis/handler.ts",
+      "lines": 715,
+      "bytes": 26226
+    },
+    {
+      "path": "src/components/CherryDeskMockupComparison.jsx",
+      "lines": 668,
+      "bytes": 22937
+    },
+    {
+      "path": "src/portal/pages/ProfilePageDesignDemo.jsx",
+      "lines": 664,
+      "bytes": 21102
+    },
+    {
+      "path": "src/portal/model-pages/ModelPhotos.jsx",
+      "lines": 647,
+      "bytes": 20531
+    },
+    {
+      "path": "src/admin/components/PartnerDetailModal.jsx",
+      "lines": 646,
+      "bytes": 21601
+    },
+    {
+      "path": "src/admin/pages/EngagementAnalyticsPage.jsx",
+      "lines": 642,
+      "bytes": 24062
+    },
+    {
+      "path": "src/admin/pages/PerformancePage.jsx",
+      "lines": 637,
+      "bytes": 21828
+    },
+    {
+      "path": "src/components/ChatWindow.jsx",
+      "lines": 635,
+      "bytes": 18627
+    },
+    {
+      "path": "src/portal/pages/ProAnalytics.jsx",
+      "lines": 632,
+      "bytes": 19174
+    },
+    {
+      "path": "src/portal/pages/ProChat.jsx",
+      "lines": 626,
+      "bytes": 21971
+    },
+    {
+      "path": "src/components/TipPayment.jsx",
+      "lines": 623,
+      "bytes": 17910
+    },
+    {
+      "path": "src/admin/components/AdminRequestIntakeModal.jsx",
+      "lines": 619,
+      "bytes": 27284
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerProfile.jsx",
+      "lines": 618,
+      "bytes": 20834
+    },
+    {
+      "path": "src/portal/model-pages/ModelLearnConsolidated.jsx",
+      "lines": 616,
+      "bytes": 18239
+    },
+    {
+      "path": "amplify/functions/analytics-api/handler.ts",
+      "lines": 616,
+      "bytes": 18857
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerDashboard.jsx",
+      "lines": 614,
+      "bytes": 19099
+    },
+    {
+      "path": "src/components/ModelAvailabilityCalendar.jsx",
+      "lines": 599,
+      "bytes": 19298
+    },
+    {
+      "path": "src/pages/FourthChairApplication.jsx",
+      "lines": 599,
+      "bytes": 19008
+    },
+    {
+      "path": "src/components/PhotoUploader.jsx",
+      "lines": 590,
+      "bytes": 18077
+    },
+    {
+      "path": "src/portal/model-pages/ModelChat.jsx",
+      "lines": 588,
+      "bytes": 21659
+    },
+    {
+      "path": "src/admin/pages/CampaignsPage.jsx",
+      "lines": 585,
+      "bytes": 18349
+    },
+    {
+      "path": "src/admin/pages/WaitlistPage.jsx",
+      "lines": 585,
+      "bytes": 18695
+    },
+    {
+      "path": "src/admin/pages/TripManagementPage.jsx",
+      "lines": 583,
+      "bytes": 18725
+    },
+    {
+      "path": "src/utils/photoRequirements.js",
+      "lines": 580,
+      "bytes": 17469
+    },
+    {
+      "path": "src/admin/pages/RoleModelShopPage.jsx",
+      "lines": 578,
+      "bytes": 17759
+    },
+    {
+      "path": "src/App.jsx",
+      "lines": 578,
+      "bytes": 28162
+    },
+    {
+      "path": "src/components/VideoUploader.jsx",
+      "lines": 566,
+      "bytes": 16614
+    },
+    {
+      "path": "amplify/functions/stripe-payment/handler.ts",
+      "lines": 563,
+      "bytes": 17229
+    },
+    {
+      "path": "src/portal/pages/ProCalendar.jsx",
+      "lines": 562,
+      "bytes": 18109
+    },
+    {
+      "path": "src/admin/pages/TripDetailPage.jsx",
+      "lines": 558,
+      "bytes": 18580
+    },
+    {
+      "path": "src/admin/pages/TrainingPage.jsx",
+      "lines": 552,
+      "bytes": 16691
+    },
+    {
+      "path": "src/portal/model-pages/ModelGames.jsx",
+      "lines": 551,
+      "bytes": 14300
+    },
+    {
+      "path": "src/portal/pages/ProRequestCreation.jsx",
+      "lines": 551,
+      "bytes": 19094
+    },
+    {
+      "path": "src/admin/pages/FeedbackPage.jsx",
+      "lines": 549,
+      "bytes": 16854
+    },
+    {
+      "path": "src/admin/pages/SalonsPage.jsx",
+      "lines": 543,
+      "bytes": 19432
+    },
+    {
+      "path": "src/portal/model-pages/ModelStylistRequest.jsx",
+      "lines": 542,
+      "bytes": 20029
+    },
+    {
+      "path": "src/admin/pages/PhotosPage.jsx",
+      "lines": 537,
+      "bytes": 19262
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerScheduleConsolidated.jsx",
+      "lines": 534,
+      "bytes": 17341
+    },
+    {
+      "path": "src/portal/pages/PortalTraining.jsx",
+      "lines": 531,
+      "bytes": 16866
+    },
+    {
+      "path": "src/components/BeautyAnalysisAdmin.jsx",
+      "lines": 528,
+      "bytes": 17205
+    },
+    {
+      "path": "src/portal/pages/PortalGallery.jsx",
+      "lines": 528,
+      "bytes": 16665
+    },
+    {
+      "path": "src/portal/ModelPortalLayout.jsx",
+      "lines": 522,
+      "bytes": 16041
+    },
+    {
+      "path": "src/matching/mockModels.js",
+      "lines": 519,
+      "bytes": 12921
+    },
+    {
+      "path": "src/portal/model-pages/ModelSessions.jsx",
+      "lines": 517,
+      "bytes": 15218
+    },
+    {
+      "path": "amplify/functions/notifications/handler.ts",
+      "lines": 513,
+      "bytes": 21895
+    },
+    {
+      "path": "src/admin/pages/PricingCalculatorPage.jsx",
+      "lines": 511,
+      "bytes": 22209
+    },
+    {
+      "path": "src/portal/model-pages/ModelLearn.jsx",
+      "lines": 495,
+      "bytes": 13445
+    },
+    {
+      "path": "src/portal/PartnerPortalLayout.jsx",
+      "lines": 494,
+      "bytes": 14505
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerCampaigns.jsx",
+      "lines": 493,
+      "bytes": 15120
+    },
+    {
+      "path": "src/admin/pages/OnboardingTestPage.jsx",
+      "lines": 490,
+      "bytes": 16319
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerCalendar.jsx",
+      "lines": 489,
+      "bytes": 15147
+    },
+    {
+      "path": "src/portal/pages/ProMatchViewing.jsx",
+      "lines": 484,
+      "bytes": 16052
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerFinancials.jsx",
+      "lines": 483,
+      "bytes": 16643
+    },
+    {
+      "path": "src/components/HairAnalysisAdmin.jsx",
+      "lines": 474,
+      "bytes": 14550
+    },
+    {
+      "path": "src/components/profile/PortfolioEditor.jsx",
+      "lines": 474,
+      "bytes": 14082
+    },
+    {
+      "path": "src/components/BeautyAnalysisResults.jsx",
+      "lines": 467,
+      "bytes": 12944
+    },
+    {
+      "path": "src/portal/model-pages/ModelShop.jsx",
+      "lines": 458,
+      "bytes": 14792
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerRoster.jsx",
+      "lines": 455,
+      "bytes": 12622
+    },
+    {
+      "path": "src/components/profile/DocumentsCertifications.jsx",
+      "lines": 452,
+      "bytes": 15178
+    },
+    {
+      "path": "src/portal/ProPortalLayout.jsx",
+      "lines": 445,
+      "bytes": 12758
+    },
+    {
+      "path": "src/utils/beautyAnalysis.js",
+      "lines": 432,
+      "bytes": 11806
+    },
+    {
+      "path": "src/admin/pages/RoleModelApplicationsPage.jsx",
+      "lines": 427,
+      "bytes": 13346
+    },
+    {
+      "path": "src/components/PhotoQualityChecker.jsx",
+      "lines": 425,
+      "bytes": 12568
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerServiceMenu.jsx",
+      "lines": 425,
+      "bytes": 14097
+    },
+    {
+      "path": "src/admin/pages/ConversionAnalyticsPage.jsx",
+      "lines": 423,
+      "bytes": 13721
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerConversions.jsx",
+      "lines": 423,
+      "bytes": 13007
+    },
+    {
+      "path": "src/utils/chatApi.js",
+      "lines": 413,
+      "bytes": 13008
+    },
+    {
+      "path": "src/portal/model-pages/ModelDashboard.jsx",
+      "lines": 408,
+      "bytes": 11881
+    },
+    {
+      "path": "src/components/PortalNotifications.jsx",
+      "lines": 407,
+      "bytes": 12141
+    },
+    {
+      "path": "src/components/ModelToProChat.jsx",
+      "lines": 405,
+      "bytes": 12242
+    },
+    {
+      "path": "src/components/TagSearchBar.jsx",
+      "lines": 399,
+      "bytes": 12077
+    },
+    {
+      "path": "src/pages/PartnerOnboard.jsx",
+      "lines": 399,
+      "bytes": 12393
+    },
+    {
+      "path": "src/admin/pages/OnboardingPage.jsx",
+      "lines": 393,
+      "bytes": 14227
+    },
+    {
+      "path": "src/components/HairAnalysisResults.jsx",
+      "lines": 392,
+      "bytes": 10503
+    },
+    {
+      "path": "src/admin/pages/MonitoringPage.jsx",
+      "lines": 388,
+      "bytes": 12156
+    },
+    {
+      "path": "src/portal/pages/ProRequestDashboard.jsx",
+      "lines": 386,
+      "bytes": 11684
+    },
+    {
+      "path": "src/components/ChatSchedule.jsx",
+      "lines": 384,
+      "bytes": 12466
+    },
+    {
+      "path": "src/utils/hairAnalysis.js",
+      "lines": 382,
+      "bytes": 10371
+    },
+    {
+      "path": "src/components/GalleryTagFilter.jsx",
+      "lines": 381,
+      "bytes": 12473
+    },
+    {
+      "path": "src/components/profile/BasicInfoEditor.jsx",
+      "lines": 375,
+      "bytes": 12066
+    },
+    {
+      "path": "src/portal/model-pages/ModelFeedback.jsx",
+      "lines": 372,
+      "bytes": 10393
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerCompliance.jsx",
+      "lines": 371,
+      "bytes": 12855
+    },
+    {
+      "path": "src/portal/model-pages/ModelCalendar.jsx",
+      "lines": 361,
+      "bytes": 11541
+    },
+    {
+      "path": "src/portal/model-pages/ModelSavings.jsx",
+      "lines": 357,
+      "bytes": 9837
+    },
+    {
+      "path": "src/utils/storage.js",
+      "lines": 356,
+      "bytes": 9354
+    },
+    {
+      "path": "src/admin/pages/CRMRevenueRelationship.jsx",
+      "lines": 354,
+      "bytes": 12118
+    },
+    {
+      "path": "src/components/profile/ModelFocusLayout.jsx",
+      "lines": 352,
+      "bytes": 11062
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerTeamConsolidated.jsx",
+      "lines": 346,
+      "bytes": 12347
+    },
+    {
+      "path": "src/utils/photoSubmission.js",
+      "lines": 346,
+      "bytes": 10662
+    },
+    {
+      "path": "src/utils/agenticScoreCalculator.js",
+      "lines": 343,
+      "bytes": 13008
+    },
+    {
+      "path": "src/admin/pages/RDSTestPage.jsx",
+      "lines": 342,
+      "bytes": 10005
+    },
+    {
+      "path": "src/utils/workflowState.js",
+      "lines": 332,
+      "bytes": 10057
+    },
+    {
+      "path": "src/components/CardOnFileSection.jsx",
+      "lines": 330,
+      "bytes": 10908
+    },
+    {
+      "path": "amplify/functions/dynamodb-sync/handler.ts",
+      "lines": 330,
+      "bytes": 9754
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerFinancialsConsolidated.jsx",
+      "lines": 327,
+      "bytes": 10226
+    },
+    {
+      "path": "src/portal/pages/PortalFeedback.jsx",
+      "lines": 324,
+      "bytes": 8584
+    },
+    {
+      "path": "src/components/ProCardOnFileSection.jsx",
+      "lines": 322,
+      "bytes": 10684
+    },
+    {
+      "path": "src/components/PhotoTagSelector.jsx",
+      "lines": 318,
+      "bytes": 8946
+    },
+    {
+      "path": "src/admin/pages/BookingsPage.jsx",
+      "lines": 317,
+      "bytes": 11696
+    },
+    {
+      "path": "src/admin/AdminLayout.jsx",
+      "lines": 316,
+      "bytes": 9449
+    },
+    {
+      "path": "src/utils/bookingFlow.js",
+      "lines": 303,
+      "bytes": 10750
+    },
+    {
+      "path": "src/admin/data/mockProfessionals.js",
+      "lines": 302,
+      "bytes": 11743
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerSupportConsolidated.jsx",
+      "lines": 300,
+      "bytes": 8523
+    },
+    {
+      "path": "src/utils/matchingApi.js",
+      "lines": 299,
+      "bytes": 9564
+    },
+    {
+      "path": "src/utils/requestIntakeOptions.js",
+      "lines": 298,
+      "bytes": 10936
+    },
+    {
+      "path": "src/components/workflow/WorkflowProgress.jsx",
+      "lines": 297,
+      "bytes": 7912
+    },
+    {
+      "path": "src/utils/stripe.js",
+      "lines": 294,
+      "bytes": 8917
+    },
+    {
+      "path": "src/admin/pages/RoleModelPage.jsx",
+      "lines": 293,
+      "bytes": 9415
+    },
+    {
+      "path": "src/components/PaymentForm.jsx",
+      "lines": 292,
+      "bytes": 8190
+    },
+    {
+      "path": "src/components/PortalStatusGate.jsx",
+      "lines": 285,
+      "bytes": 9086
+    },
+    {
+      "path": "src/admin/pages/ServicesPage.jsx",
+      "lines": 284,
+      "bytes": 9811
+    },
+    {
+      "path": "src/components/SessionPhotoUploader.jsx",
+      "lines": 277,
+      "bytes": 7845
+    },
+    {
+      "path": "src/admin/components/PartnerTeamPanel.jsx",
+      "lines": 275,
+      "bytes": 9224
+    },
+    {
+      "path": "src/pages/WearCareShop.jsx",
+      "lines": 275,
+      "bytes": 8236
+    },
+    {
+      "path": "src/admin/pages/RoleModelMetricsPage.jsx",
+      "lines": 274,
+      "bytes": 9945
+    },
+    {
+      "path": "src/pages/EnterModeled.jsx",
+      "lines": 274,
+      "bytes": 8765
+    },
+    {
+      "path": "src/components/profile/ProCardOverview.jsx",
+      "lines": 268,
+      "bytes": 7121
+    },
+    {
+      "path": "src/utils/engagementTracker.js",
+      "lines": 266,
+      "bytes": 7472
+    },
+    {
+      "path": "src/components/profile/SettingsPreferences.jsx",
+      "lines": 265,
+      "bytes": 7745
+    },
+    {
+      "path": "src/components/profile/SpecialtiesEditor.jsx",
+      "lines": 264,
+      "bytes": 7806
+    },
+    {
+      "path": "src/components/InspirationBoard.jsx",
+      "lines": 262,
+      "bytes": 8337
+    },
+    {
+      "path": "src/components/AutoTaggedAttributes.jsx",
+      "lines": 261,
+      "bytes": 7557
+    },
+    {
+      "path": "src/components/profile/PublicProfilePreview.jsx",
+      "lines": 261,
+      "bytes": 7133
+    },
+    {
+      "path": "src/components/DailyQuestionWidget.jsx",
+      "lines": 260,
+      "bytes": 7193
+    },
+    {
+      "path": "src/utils/databaseUtils.js",
+      "lines": 258,
+      "bytes": 7140
+    },
+    {
+      "path": "src/pages/waitlist/PartnerWaitlist.jsx",
+      "lines": 256,
+      "bytes": 9038
+    },
+    {
+      "path": "src/admin/pages/CRMEmailTemplates.jsx",
+      "lines": 251,
+      "bytes": 7479
+    },
+    {
+      "path": "src/pages/waitlist/ModelWaitlist.jsx",
+      "lines": 250,
+      "bytes": 8925
+    },
+    {
+      "path": "src/pages/waitlist/ProfessionalWaitlist.jsx",
+      "lines": 250,
+      "bytes": 8917
+    },
+    {
+      "path": "src/admin/components/ListView.jsx",
+      "lines": 246,
+      "bytes": 7097
+    },
+    {
+      "path": "src/components/profile/ModelCardOverview.jsx",
+      "lines": 246,
+      "bytes": 7437
+    },
+    {
+      "path": "src/utils/autoMatching.js",
+      "lines": 246,
+      "bytes": 8035
+    },
+    {
+      "path": "src/utils/galleryTags.js",
+      "lines": 243,
+      "bytes": 7590
+    },
+    {
+      "path": "src/utils/partnerProfile.js",
+      "lines": 242,
+      "bytes": 8706
+    },
+    {
+      "path": "src/utils/calendarUtils.js",
+      "lines": 241,
+      "bytes": 7442
+    },
+    {
+      "path": "src/utils/agenticScores.js",
+      "lines": 240,
+      "bytes": 9540
+    },
+    {
+      "path": "amplify/monitoring/cloudwatch.ts",
+      "lines": 239,
+      "bytes": 6767
+    },
+    {
+      "path": "src/utils/rds-analytics.js",
+      "lines": 238,
+      "bytes": 6236
+    },
+    {
+      "path": "src/utils/createNotification.js",
+      "lines": 237,
+      "bytes": 6542
+    },
+    {
+      "path": "src/utils/authUtils.js",
+      "lines": 236,
+      "bytes": 6623
+    },
+    {
+      "path": "src/utils/crmService.js",
+      "lines": 233,
+      "bytes": 5594
+    },
+    {
+      "path": "scripts/test-booking-flow.js",
+      "lines": 232,
+      "bytes": 7814
+    },
+    {
+      "path": "src/admin/components/CalendarDashboard.jsx",
+      "lines": 229,
+      "bytes": 8164
+    },
+    {
+      "path": "src/admin/components/MonthView.jsx",
+      "lines": 229,
+      "bytes": 7167
+    },
+    {
+      "path": "src/utils/storageLimits.js",
+      "lines": 229,
+      "bytes": 5878
+    },
+    {
+      "path": "src/utils/professionalTags.js",
+      "lines": 227,
+      "bytes": 7620
+    },
+    {
+      "path": "src/utils/requestService.js",
+      "lines": 225,
+      "bytes": 7047
+    },
+    {
+      "path": "src/pages/PaymentPage.jsx",
+      "lines": 222,
+      "bytes": 7053
+    },
+    {
+      "path": "src/utils/chatTiming.js",
+      "lines": 220,
+      "bytes": 6652
+    },
+    {
+      "path": "src/utils/profileService.js",
+      "lines": 210,
+      "bytes": 7139
+    },
+    {
+      "path": "amplify/functions/pinpoint-segments/handler.ts",
+      "lines": 208,
+      "bytes": 4716
+    },
+    {
+      "path": "src/utils/waitlistApi.js",
+      "lines": 205,
+      "bytes": 6169
+    },
+    {
+      "path": "src/utils/calendar.js",
+      "lines": 202,
+      "bytes": 5473
+    },
+    {
+      "path": "src/pages/JoinModeled.jsx",
+      "lines": 201,
+      "bytes": 6185
+    },
+    {
+      "path": "src/admin/pages/RoleModelMatchingPage.jsx",
+      "lines": 200,
+      "bytes": 6455
+    },
+    {
+      "path": "src/admin/data/training.js",
+      "lines": 199,
+      "bytes": 7885
+    },
+    {
+      "path": "src/admin/pages/RoleModelProfessionalsPage.jsx",
+      "lines": 199,
+      "bytes": 6243
+    },
+    {
+      "path": "src/utils/smartDefaults.js",
+      "lines": 199,
+      "bytes": 5810
+    },
+    {
+      "path": "src/admin/data/partnerDrafts/roman-k-salon.js",
+      "lines": 198,
+      "bytes": 6241
+    },
+    {
+      "path": "amplify/functions/crm-outreach/handler.ts",
+      "lines": 198,
+      "bytes": 4877
+    },
+    {
+      "path": "src/utils/packagesApi.js",
+      "lines": 196,
+      "bytes": 5444
+    },
+    {
+      "path": "src/utils/photoOptimization.js",
+      "lines": 192,
+      "bytes": 5447
+    },
+    {
+      "path": "amplify/backend.ts",
+      "lines": 192,
+      "bytes": 8024
+    },
+    {
+      "path": "src/utils/onboardingVerification.js",
+      "lines": 191,
+      "bytes": 6153
+    },
+    {
+      "path": "amplify/functions/identity-verification/handler.ts",
+      "lines": 189,
+      "bytes": 7020
+    },
+    {
+      "path": "amplify/functions/pinpoint-campaigns/handler.ts",
+      "lines": 189,
+      "bytes": 4706
+    },
+    {
+      "path": "src/utils/pinpointSegments.ts",
+      "lines": 187,
+      "bytes": 3715
+    },
+    {
+      "path": "src/utils/analytics.js",
+      "lines": 186,
+      "bytes": 4558
+    },
+    {
+      "path": "src/utils/bookingCompletion.js",
+      "lines": 182,
+      "bytes": 6204
+    },
+    {
+      "path": "src/admin/components/WaitlistPanel.jsx",
+      "lines": 181,
+      "bytes": 4843
+    },
+    {
+      "path": "src/utils/partnerTags.js",
+      "lines": 181,
+      "bytes": 5434
+    },
+    {
+      "path": "src/components/BeautyMaintenanceTimeline.jsx",
+      "lines": 178,
+      "bytes": 5470
+    },
+    {
+      "path": "src/components/ErrorBoundary.jsx",
+      "lines": 176,
+      "bytes": 4424
+    },
+    {
+      "path": "src/components/LocationHelper.jsx",
+      "lines": 176,
+      "bytes": 5213
+    },
+    {
+      "path": "src/admin/pages/DatabaseTestPage.jsx",
+      "lines": 173,
+      "bytes": 4707
+    },
+    {
+      "path": "src/components/StorageUsage.jsx",
+      "lines": 171,
+      "bytes": 5207
+    },
+    {
+      "path": "src/utils/notifications.js",
+      "lines": 171,
+      "bytes": 4663
+    },
+    {
+      "path": "src/components/ProtectedRoute.jsx",
+      "lines": 170,
+      "bytes": 4705
+    },
+    {
+      "path": "src/utils/emailTemplates.js",
+      "lines": 170,
+      "bytes": 4712
+    },
+    {
+      "path": "src/utils/errorHandling.js",
+      "lines": 170,
+      "bytes": 5100
+    },
+    {
+      "path": "src/utils/serviceAttributes.js",
+      "lines": 170,
+      "bytes": 6164
+    },
+    {
+      "path": "src/admin/data/mockRequests.js",
+      "lines": 169,
+      "bytes": 5410
+    },
+    {
+      "path": "src/utils/scoreUpdater.js",
+      "lines": 169,
+      "bytes": 5071
+    },
+    {
+      "path": "src/components/AddToCalendar.jsx",
+      "lines": 161,
+      "bytes": 4365
+    },
+    {
+      "path": "src/utils/cloudtrail.js",
+      "lines": 160,
+      "bytes": 3858
+    },
+    {
+      "path": "src/utils/pinpointTracking.ts",
+      "lines": 157,
+      "bytes": 4783
+    },
+    {
+      "path": "src/admin/data/mockPackages.js",
+      "lines": 156,
+      "bytes": 4842
+    },
+    {
+      "path": "src/utils/databaseOperations.js",
+      "lines": 155,
+      "bytes": 4593
+    },
+    {
+      "path": "amplify/monitoring/resource.ts",
+      "lines": 155,
+      "bytes": 4558
+    },
+    {
+      "path": "src/utils/tipTracking.js",
+      "lines": 154,
+      "bytes": 4438
+    },
+    {
+      "path": "amplify/storage/resource.ts",
+      "lines": 150,
+      "bytes": 5648
+    },
+    {
+      "path": "src/utils/resolveIntakeProfessional.js",
+      "lines": 148,
+      "bytes": 4906
+    },
+    {
+      "path": "scripts/generate-appsync-schema.js",
+      "lines": 146,
+      "bytes": 5345
+    },
+    {
+      "path": "amplify/functions/booking-reminders/handler.ts",
+      "lines": 142,
+      "bytes": 4589
+    },
+    {
+      "path": "src/admin/data/mockBookings.js",
+      "lines": 141,
+      "bytes": 4419
+    },
+    {
+      "path": "amplify/functions/model-payment-reminders/handler.ts",
+      "lines": 140,
+      "bytes": 4806
+    },
+    {
+      "path": "src/utils/cloudwatch.js",
+      "lines": 135,
+      "bytes": 3607
+    },
+    {
+      "path": "src/utils/pinpointCampaigns.ts",
+      "lines": 135,
+      "bytes": 3840
+    },
+    {
+      "path": "src/utils/autoSave.js",
+      "lines": 125,
+      "bytes": 2863
+    },
+    {
+      "path": "src/utils/profileConstants.js",
+      "lines": 124,
+      "bytes": 2698
+    },
+    {
+      "path": "src/pages/waitlist/waitlistStyles.js",
+      "lines": 123,
+      "bytes": 3102
+    },
+    {
+      "path": "amplify/functions/crm-followups/handler.ts",
+      "lines": 123,
+      "bytes": 3387
+    },
+    {
+      "path": "src/admin/pages/CRMAnalytics.jsx",
+      "lines": 122,
+      "bytes": 3797
+    },
+    {
+      "path": "src/utils/stylistMatchService.js",
+      "lines": 122,
+      "bytes": 3971
+    },
+    {
+      "path": "src/utils/onboardingTracker.js",
+      "lines": 120,
+      "bytes": 3581
+    },
+    {
+      "path": "src/utils/professionalProfile.js",
+      "lines": 119,
+      "bytes": 4361
+    },
+    {
+      "path": "src/utils/modelPhotoResolver.js",
+      "lines": 118,
+      "bytes": 3338
+    },
+    {
+      "path": "src/pages/demo/DemoHub.jsx",
+      "lines": 117,
+      "bytes": 4306
+    },
+    {
+      "path": "amplify/functions/chat-activation/handler.ts",
+      "lines": 116,
+      "bytes": 4089
+    },
+    {
+      "path": "src/components/SendNotificationButton.jsx",
+      "lines": 115,
+      "bytes": 2946
+    },
+    {
+      "path": "src/utils/automatedFollowups.js",
+      "lines": 112,
+      "bytes": 3205
+    },
+    {
+      "path": "src/utils/faceDetection.js",
+      "lines": 111,
+      "bytes": 3384
+    },
+    {
+      "path": "src/components/NotificationBell.jsx",
+      "lines": 108,
+      "bytes": 3217
+    },
+    {
+      "path": "src/admin/components/PartnerLocationsPanel.jsx",
+      "lines": 105,
+      "bytes": 2891
+    },
+    {
+      "path": "src/utils/imageHelpers.js",
+      "lines": 105,
+      "bytes": 4190
+    },
+    {
+      "path": "scripts/backfillProfessionalGeocoding.js",
+      "lines": 105,
+      "bytes": 3092
+    },
+    {
+      "path": "src/utils/linkedinOutreach.js",
+      "lines": 101,
+      "bytes": 2673
+    },
+    {
+      "path": "src/utils/photoAnalysis.js",
+      "lines": 101,
+      "bytes": 2902
+    },
+    {
+      "path": "src/admin/components/PartnerServicesPanel.jsx",
+      "lines": 99,
+      "bytes": 2811
+    },
+    {
+      "path": "amplify/analytics/rds-resource.ts",
+      "lines": 98,
+      "bytes": 2986
+    },
+    {
+      "path": "src/admin/adminRoutes.jsx",
+      "lines": 97,
+      "bytes": 6311
+    },
+    {
+      "path": "src/admin/data/mockWaitlist.js",
+      "lines": 96,
+      "bytes": 3210
+    },
+    {
+      "path": "src/matching/nycTransitEstimator.js",
+      "lines": 95,
+      "bytes": 3502
+    },
+    {
+      "path": "src/utils/adminProfessionalOptions.js",
+      "lines": 95,
+      "bytes": 3027
+    },
+    {
+      "path": "amplify/functions/agentic-decay/handler.ts",
+      "lines": 95,
+      "bytes": 3602
+    },
+    {
+      "path": "src/utils/cognitoAttributeVerification.js",
+      "lines": 93,
+      "bytes": 3073
+    },
+    {
+      "path": "amplify/functions/auto-matching/handler.ts",
+      "lines": 89,
+      "bytes": 3108
+    },
+    {
+      "path": "src/admin/components/IdentityDocLinks.jsx",
+      "lines": 88,
+      "bytes": 2931
+    },
+    {
+      "path": "src/portal/data/trainingData.js",
+      "lines": 88,
+      "bytes": 3770
+    },
+    {
+      "path": "src/components/PrivateBetaLaunch.jsx",
+      "lines": 87,
+      "bytes": 2911
+    },
+    {
+      "path": "src/components/PaymentStatus.jsx",
+      "lines": 86,
+      "bytes": 1969
+    },
+    {
+      "path": "src/admin/data/mockNotifications.js",
+      "lines": 85,
+      "bytes": 2919
+    },
+    {
+      "path": "src/main.jsx",
+      "lines": 84,
+      "bytes": 2714
+    },
+    {
+      "path": "amplify/functions/match-expiration/handler.ts",
+      "lines": 83,
+      "bytes": 2572
+    },
+    {
+      "path": "amplify/storage/intelligent-tiering.ts",
+      "lines": 79,
+      "bytes": 2670
+    },
+    {
+      "path": "src/matching/matchingDemo.js",
+      "lines": 78,
+      "bytes": 2913
+    },
+    {
+      "path": "scripts/buildZipCentroids.js",
+      "lines": 78,
+      "bytes": 2770
+    },
+    {
+      "path": "src/admin/data/services.js",
+      "lines": 75,
+      "bytes": 9200
+    },
+    {
+      "path": "src/utils/exifOrientation.js",
+      "lines": 74,
+      "bytes": 2405
+    },
+    {
+      "path": "src/admin/pages/PlaceholderPage.jsx",
+      "lines": 72,
+      "bytes": 2517
+    },
+    {
+      "path": "src/pages/waitlist/WaitlistThanks.jsx",
+      "lines": 72,
+      "bytes": 2450
+    },
+    {
+      "path": "src/utils/demoPortalMode.js",
+      "lines": 70,
+      "bytes": 1785
+    },
+    {
+      "path": "src/admin/components/CalendarViewSwitcher.jsx",
+      "lines": 69,
+      "bytes": 1852
+    },
+    {
+      "path": "src/admin/data/mockMatches.js",
+      "lines": 68,
+      "bytes": 1913
+    },
+    {
+      "path": "src/components/StripeProvider.jsx",
+      "lines": 68,
+      "bytes": 2002
+    },
+    {
+      "path": "src/utils/amplifyClient.js",
+      "lines": 68,
+      "bytes": 1730
+    },
+    {
+      "path": "amplify/monitoring/cloudtrail.ts",
+      "lines": 66,
+      "bytes": 2300
+    },
+    {
+      "path": "src/components/profile/ResolvedProfileImage.jsx",
+      "lines": 65,
+      "bytes": 1463
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerPlaceholder.jsx",
+      "lines": 56,
+      "bytes": 2085
+    },
+    {
+      "path": "src/utils/geocoding.js",
+      "lines": 56,
+      "bytes": 1821
+    },
+    {
+      "path": "amplify/eventbridge/scheduled-rules.ts",
+      "lines": 51,
+      "bytes": 1694
+    },
+    {
+      "path": "src/portal/data/feedbackData.js",
+      "lines": 50,
+      "bytes": 1338
+    },
+    {
+      "path": "amplify/auth/resource.ts",
+      "lines": 50,
+      "bytes": 1287
+    },
+    {
+      "path": "amplify/notifications/pinpoint-resource.ts",
+      "lines": 50,
+      "bytes": 1455
+    },
+    {
+      "path": "src/components/ErrorHandler.jsx",
+      "lines": 48,
+      "bytes": 1268
+    },
+    {
+      "path": "src/hooks/useNotifications.js",
+      "lines": 48,
+      "bytes": 1188
+    },
+    {
+      "path": "src/utils/professionalCreatePayload.js",
+      "lines": 44,
+      "bytes": 1555
+    },
+    {
+      "path": "src/utils/modelDisplayTags.js",
+      "lines": 42,
+      "bytes": 1362
+    },
+    {
+      "path": "src/portal/partner-pages/PartnerChat.jsx",
+      "lines": 41,
+      "bytes": 900
+    },
+    {
+      "path": "src/MODELEDMGMTCODE.jsx",
+      "lines": 36,
+      "bytes": 900
+    },
+    {
+      "path": "src/admin/data/professionalDrafts/scott-waldman-roman-k.js",
+      "lines": 35,
+      "bytes": 1401
+    },
+    {
+      "path": "src/components/InactivityLogout.jsx",
+      "lines": 35,
+      "bytes": 966
+    },
+    {
+      "path": "src/matching/index.js",
+      "lines": 34,
+      "bytes": 636
+    },
+    {
+      "path": "src/utils/identityVerificationUpload.js",
+      "lines": 33,
+      "bytes": 1178
+    },
+    {
+      "path": "amplify/functions/notifications/resource.ts",
+      "lines": 31,
+      "bytes": 770
+    },
+    {
+      "path": "src/components/AuthRedirect.jsx",
+      "lines": 29,
+      "bytes": 932
+    },
+    {
+      "path": "src/utils/modelOnboardPayload.js",
+      "lines": 28,
+      "bytes": 925
+    },
+    {
+      "path": "amplify/functions/analytics-api/resource.ts",
+      "lines": 28,
+      "bytes": 1113
+    },
+    {
+      "path": "amplify/functions/auto-matching/resource.ts",
+      "lines": 28,
+      "bytes": 829
+    },
+    {
+      "path": "src/admin/components/ModelCoverImage.jsx",
+      "lines": 27,
+      "bytes": 670
+    },
+    {
+      "path": "src/utils/partnerServices.js",
+      "lines": 27,
+      "bytes": 830
+    },
+    {
+      "path": "src/utils/resolveStorageUrl.js",
+      "lines": 27,
+      "bytes": 914
+    },
+    {
+      "path": "amplify/functions/photo-analysis/resource.ts",
+      "lines": 27,
+      "bytes": 910
+    },
+    {
+      "path": "amplify/storage/custom-resource.ts",
+      "lines": 27,
+      "bytes": 1020
+    },
+    {
+      "path": "src/matching/data/nycBoroughByZipPrefix.js",
+      "lines": 25,
+      "bytes": 694
+    },
+    {
+      "path": "src/utils/adminProfessionalLookup.js",
+      "lines": 25,
+      "bytes": 778
+    },
+    {
+      "path": "src/utils/s3StorageKey.js",
+      "lines": 25,
+      "bytes": 866
+    },
+    {
+      "path": "amplify/amplify-env.d.ts",
+      "lines": 25,
+      "bytes": 783
+    },
+    {
+      "path": "amplify/functions/pinpoint-campaigns/resource.ts",
+      "lines": 25,
+      "bytes": 689
+    },
+    {
+      "path": "amplify/functions/stripe-payment/resource.ts",
+      "lines": 25,
+      "bytes": 673
+    },
+    {
+      "path": "src/context/DemoAuthContext.jsx",
+      "lines": 24,
+      "bytes": 691
+    },
+    {
+      "path": "src/hooks/usePortalAuth.js",
+      "lines": 23,
+      "bytes": 641
+    },
+    {
+      "path": "amplify/functions/dynamodb-sync/resource.ts",
+      "lines": 23,
+      "bytes": 548
+    },
+    {
+      "path": "amplify/functions/agentic-decay/resource.ts",
+      "lines": 22,
+      "bytes": 616
+    },
+    {
+      "path": "amplify/functions/pinpoint-segments/resource.ts",
+      "lines": 22,
+      "bytes": 515
+    },
+    {
+      "path": "src/admin/utils/approvalStatus.js",
+      "lines": 21,
+      "bytes": 748
+    },
+    {
+      "path": "amplify/functions/crm-outreach/resource.ts",
+      "lines": 19,
+      "bytes": 432
+    },
+    {
+      "path": "amplify/functions/match-expiration/resource.ts",
+      "lines": 19,
+      "bytes": 413
+    },
+    {
+      "path": "src/utils/deployedApiEnums.js",
+      "lines": 18,
+      "bytes": 767
+    },
+    {
+      "path": "src/utils/verificationBypass.js",
+      "lines": 15,
+      "bytes": 536
+    },
+    {
+      "path": "amplify/functions/crm-followups/resource.ts",
+      "lines": 15,
+      "bytes": 328
+    },
+    {
+      "path": "amplify/functions/booking-reminders/resource.ts",
+      "lines": 12,
+      "bytes": 269
+    },
+    {
+      "path": "amplify/functions/chat-activation/resource.ts",
+      "lines": 12,
+      "bytes": 270
+    },
+    {
+      "path": "amplify/functions/identity-verification/resource.ts",
+      "lines": 12,
+      "bytes": 260
+    },
+    {
+      "path": "amplify/functions/model-payment-reminders/resource.ts",
+      "lines": 12,
+      "bytes": 293
+    },
+    {
+      "path": "src/admin/data/partnerDrafts/index.js",
+      "lines": 9,
+      "bytes": 315
+    },
+    {
+      "path": "src/admin/data/professionalDrafts/index.js",
+      "lines": 9,
+      "bytes": 302
+    },
+    {
+      "path": "src/hooks/usePortalBasePath.js",
+      "lines": 8,
+      "bytes": 263
+    },
+    {
+      "path": "src/utils/isLocalDevHost.js",
+      "lines": 5,
+      "bytes": 245
+    }
+  ]
+}

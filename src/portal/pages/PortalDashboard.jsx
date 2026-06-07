@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { getBookingsForUser } from '../../utils/bookingService';
 import { getProfessionalProfile } from '../../utils/profileService';
 import { getTipStats } from '../../utils/tipTracking';

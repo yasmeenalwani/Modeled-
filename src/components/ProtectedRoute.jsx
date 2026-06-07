@@ -145,7 +145,10 @@ export function useStrictAdmin() {
         const session = await fetchAuthSession();
         const tokens = session.tokens;
         if (!tokens) {
-          if (!cancelled) setIsAdmin(false);
+          if (!cancelled) {
+            setIsAdmin(false);
+            setIsLoading(false);
+          }
           return;
         }
         const groups = tokens.idToken?.payload?.['cognito:groups'] || [];

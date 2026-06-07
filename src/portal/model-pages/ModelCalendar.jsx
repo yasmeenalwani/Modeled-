@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { getBookingsForUser } from '../../utils/bookingService';
 import { getServiceById } from '../../admin/data/services';
 import AddToCalendar from '../../components/AddToCalendar';

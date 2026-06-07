@@ -8,13 +8,13 @@ import PhotoUploader from '../components/PhotoUploader';
 import { getPortfolioPath, getProfilePhotoPath } from '../utils/storage';
 import { geocodeAddress } from '../utils/geocoding';
 import { shouldUseMockData } from '../utils/mockDataService';
-import { isLocalDevHost } from '../utils/isLocalDevHost';
 import {
   ensureEmailVerificationCodeSent,
   confirmEmailVerificationCode,
   getCognitoEmailState,
   formatVerificationError,
 } from '../utils/cognitoAttributeVerification';
+import { allowOnboardingVerificationBypass } from '../utils/verificationBypass';
 
 const client = generateClient();
 const LOCAL_PRO_SUBMISSIONS_KEY = 'modeled_local_professional_submissions';
@@ -621,7 +621,7 @@ function StepEmailVerification({ data, setData, onSkip }) {
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState(null);
   const [cognitoEmail, setCognitoEmail] = useState(null);
-  const allowTestBypass = shouldUseMockData() || isLocalDevHost();
+  const allowTestBypass = allowOnboardingVerificationBypass();
 
   useEffect(() => {
     if (allowTestBypass || isVerified) return;
@@ -775,7 +775,7 @@ function StepPhoneVerification({ data, setData, onSkip }) {
   const [isSending, setIsSending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState(null);
-  const allowTestBypass = shouldUseMockData() || isLocalDevHost();
+  const allowTestBypass = allowOnboardingVerificationBypass();
 
   const handleSendCode = async () => {
     setError(null);
@@ -1409,7 +1409,7 @@ function StepPortfolio({ data, setData, userId, storageEntityId }) {
   );
 }
 
-function StepVerification({ data, setData, userId }) {
+function StepVerification({ data, setData, userId, storageEntityId }) {
   return (
     <div>
       <h3 style={styles.stepTitle}>Verification</h3>
@@ -1418,7 +1418,7 @@ function StepVerification({ data, setData, userId }) {
       </p>
       <IdentityVerification
         userType="professional"
-        userId={userId}
+        userId={storageEntityId || userId}
         existingData={data}
         onVerificationComplete={(verificationData) => {
           setData({ ...data, ...verificationData });

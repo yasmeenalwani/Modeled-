@@ -19,8 +19,11 @@ import ProfessionalWaitlist from "./pages/waitlist/ProfessionalWaitlist";
 import PartnerWaitlist from "./pages/waitlist/PartnerWaitlist";
 import WaitlistThanks from "./pages/waitlist/WaitlistThanks";
 import PrivateBetaLaunch from "./components/PrivateBetaLaunch";
+import DemoHub from "./pages/demo/DemoHub";
+import { DemoAuthProvider } from "./context/DemoAuthContext";
 import { useStrictAdmin } from "./components/ProtectedRoute";
 import { isLocalDevHost } from "./utils/isLocalDevHost";
+import { createAdminRoute } from "./admin/adminRoutes";
 
 // Lazy load portal components to catch errors
 const ProPortalLayout = React.lazy(() => import("./portal/ProPortalLayout"));
@@ -82,47 +85,6 @@ const PartnerSupportConsolidated = React.lazy(() => import("./portal/partner-pag
 
 // Import Admin Portal
 const AdminLayout = React.lazy(() => import("./admin/AdminLayout"));
-const AdminDashboard = React.lazy(() => import("./admin/pages/Dashboard"));
-const AdminTrends = React.lazy(() => import("./admin/pages/TrendsPage"));
-const AdminRevenue = React.lazy(() => import("./admin/pages/RevenuePage"));
-const AdminModels = React.lazy(() => import("./admin/pages/ModelsPage"));
-const AdminProfessionals = React.lazy(() => import("./admin/pages/ProfessionalsPage"));
-const AdminSalons = React.lazy(() => import("./admin/pages/SalonsPage"));
-const AdminRequests = React.lazy(() => import("./admin/pages/RequestsPage"));
-const AdminMatching = React.lazy(() => import("./admin/pages/MatchEnginePage"));
-const AdminMatchApproval = React.lazy(() => import("./admin/pages/MatchApprovalPage"));
-const AdminMatchCriteria = React.lazy(() => import("./admin/pages/MatchCriteriaPage"));
-const AdminBookings = React.lazy(() => import("./admin/pages/BookingsPage"));
-const AdminCalendar = React.lazy(() => import("./admin/pages/CalendarPage"));
-const AdminWaitlist = React.lazy(() => import("./admin/pages/WaitlistPage"));
-const AdminServices = React.lazy(() => import("./admin/pages/ServicesPage"));
-const AdminPackages = React.lazy(() => import("./admin/pages/PackagesPage"));
-const AdminOnboarding = React.lazy(() => import("./admin/pages/OnboardingPage"));
-const AdminTraining = React.lazy(() => import("./admin/pages/TrainingPage"));
-const AdminPhotos = React.lazy(() => import("./admin/pages/PhotosPage"));
-const AdminMonitoring = React.lazy(() => import("./admin/pages/MonitoringPage"));
-const AdminPerformance = React.lazy(() => import("./admin/pages/PerformancePage"));
-const AdminFeedback = React.lazy(() => import("./admin/pages/FeedbackPage"));
-const AdminCampaigns = React.lazy(() => import("./admin/pages/CampaignsPage"));
-const AdminChat = React.lazy(() => import("./admin/pages/ChatManagementPage"));
-const AdminCRM = React.lazy(() => import("./admin/pages/CRMPage"));
-const AdminCRMTemplates = React.lazy(() => import("./admin/pages/CRMEmailTemplates"));
-const AdminCRMAnalytics = React.lazy(() => import("./admin/pages/CRMAnalytics"));
-const AdminCRMRevenue = React.lazy(() => import("./admin/pages/CRMRevenueRelationship"));
-const AdminTripManagement = React.lazy(() => import("./admin/pages/TripManagementPage"));
-const AdminTripDetail = React.lazy(() => import("./admin/pages/TripDetailPage"));
-const AdminOnboardingAnalytics = React.lazy(() => import("./admin/pages/OnboardingAnalyticsPage"));
-const AdminEngagementAnalytics = React.lazy(() => import("./admin/pages/EngagementAnalyticsPage"));
-const AdminConversionAnalytics = React.lazy(() => import("./admin/pages/ConversionAnalyticsPage"));
-const AdminDatabaseTest = React.lazy(() => import("./admin/pages/DatabaseTestPage"));
-const AdminRDSTest = React.lazy(() => import("./admin/pages/RDSTestPage"));
-const AdminRoleModel = React.lazy(() => import("./admin/pages/RoleModelPage"));
-const AdminRoleModelApplications = React.lazy(() => import("./admin/pages/RoleModelApplicationsPage"));
-const AdminRoleModelProfessionals = React.lazy(() => import("./admin/pages/RoleModelProfessionalsPage"));
-const AdminRoleModelMatching = React.lazy(() => import("./admin/pages/RoleModelMatchingPage"));
-const AdminRoleModelShop = React.lazy(() => import("./admin/pages/RoleModelShopPage"));
-const AdminRoleModelMetrics = React.lazy(() => import("./admin/pages/RoleModelMetricsPage"));
-const PlaceholderPage = React.lazy(() => import("./admin/pages/PlaceholderPage"));
 
 // Configure Amplify (include custom REST APIs for identity verification)
 try {
@@ -137,6 +99,29 @@ try {
 } catch (error) {
   console.error('Error configuring Amplify:', error);
   // Don't crash the app if Amplify config fails
+}
+
+/** Local dev only: /admin without Cognito sign-in (must be before /* Authenticator route) */
+function DevLocalAdminShell() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <div>
+        <div
+          style={{
+            background: '#1a3a1a',
+            color: '#8fdf8f',
+            padding: '0.35rem 1rem',
+            fontSize: '0.8rem',
+            textAlign: 'center',
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
+          Local dev admin — no sign-in · use http://localhost/admin (not LAN IP)
+        </div>
+        <AdminLayout />
+      </div>
+    </Suspense>
+  );
 }
 
 // Landing Page Component
@@ -446,54 +431,11 @@ function AuthenticatedApp() {
         </Route>
         
         {/* Admin Portal - Admin group only */}
-        <Route path="/admin" element={
+        {createAdminRoute(
           <ProtectedRoute allowedGroups={['Admin']} redirectTo="/">
             <AdminLayout />
           </ProtectedRoute>
-        }>
-          <Route index element={<AdminDashboard />} />
-          <Route path="trends" element={<AdminTrends />} />
-          <Route path="revenue" element={<AdminRevenue />} />
-          <Route path="models" element={<AdminModels />} />
-          <Route path="professionals" element={<AdminProfessionals />} />
-          <Route path="salons" element={<AdminSalons />} />
-          <Route path="requests" element={<AdminRequests />} />
-          <Route path="matching" element={<AdminMatching />} />
-          <Route path="match-approval" element={<AdminMatchApproval />} />
-          <Route path="criteria" element={<AdminMatchCriteria />} />
-          <Route path="bookings" element={<AdminBookings />} />
-          <Route path="calendar" element={<AdminCalendar />} />
-          <Route path="waitlist" element={<AdminWaitlist />} />
-          <Route path="services" element={<AdminServices />} />
-          <Route path="packages" element={<AdminPackages />} />
-          <Route path="onboarding" element={<AdminOnboarding />} />
-          <Route path="training" element={<AdminTraining />} />
-          <Route path="photos" element={<AdminPhotos />} />
-          <Route path="monitoring" element={<AdminMonitoring />} />
-          <Route path="performance" element={<AdminPerformance />} />
-          <Route path="feedback" element={<AdminFeedback />} />
-          <Route path="campaigns" element={<AdminCampaigns />} />
-          <Route path="crm" element={<AdminCRM />} />
-          <Route path="crm/templates" element={<AdminCRMTemplates />} />
-          <Route path="crm/analytics" element={<AdminCRMAnalytics />} />
-          <Route path="crm/revenue" element={<AdminCRMRevenue />} />
-          <Route path="trips" element={<AdminTripManagement />} />
-          <Route path="trips/:id" element={<AdminTripDetail />} />
-          <Route path="chat" element={<AdminChat />} />
-          <Route path="onboarding-analytics" element={<AdminOnboardingAnalytics />} />
-          <Route path="engagement-analytics" element={<AdminEngagementAnalytics />} />
-          <Route path="conversion-analytics" element={<AdminConversionAnalytics />} />
-          <Route path="database-test" element={<AdminDatabaseTest />} />
-          <Route path="rds-test" element={<AdminRDSTest />} />
-          <Route path="role-model" element={<AdminRoleModel />} />
-          <Route path="role-model/applications" element={<AdminRoleModelApplications />} />
-          <Route path="role-model/professionals" element={<AdminRoleModelProfessionals />} />
-          <Route path="role-model/matching" element={<AdminRoleModelMatching />} />
-          <Route path="role-model/shop" element={<AdminRoleModelShop />} />
-          <Route path="role-model/metrics" element={<AdminRoleModelMetrics />} />
-          {/* Fallback for any unmatched admin routes */}
-          <Route path="*" element={<PlaceholderPage />} />
-        </Route>
+        )}
       </Routes>
     </Suspense>
   );
@@ -515,6 +457,64 @@ export default function App() {
             <Route path="/enter" element={<EnterModeled />} />
             <Route path="/thanks" element={<WaitlistThanks />} />
             <Route path="/design/cherry-desk-mockups" element={<CherryDeskMockupComparison />} />
+
+            {/* Public demo portals — no sign-in (presentations) */}
+            <Route path="/demo" element={<DemoHub />} />
+            <Route
+              path="/demo/seraphina"
+              element={
+                <DemoAuthProvider personaKey="seraphina">
+                  <ModelPortalLayout />
+                </DemoAuthProvider>
+              }
+            >
+              <Route index element={<Navigate to="profile" replace />} />
+              <Route path="profile" element={<ModelProfile />} />
+              <Route path="opportunities" element={<ModelOpportunities />} />
+              <Route path="photos" element={<ModelPhotos />} />
+              <Route path="games" element={<ModelGames />} />
+              <Route path="chat" element={<ModelChat />} />
+              <Route path="calendar" element={<ModelCalendar />} />
+              <Route path="sessions" element={<ModelSessionsConsolidated />} />
+            </Route>
+            <Route
+              path="/demo/sarah"
+              element={
+                <DemoAuthProvider personaKey="sarah">
+                  <ProPortalLayout />
+                </DemoAuthProvider>
+              }
+            >
+              <Route index element={<Navigate to="profile" replace />} />
+              <Route path="profile" element={<PortalProfile />} />
+              <Route path="matching" element={<ProMatching />} />
+              <Route path="portfolio" element={<ProPortfolioConsolidated />} />
+              <Route path="calendar" element={<ProCalendar />} />
+              <Route path="education" element={<PortalTraining />} />
+              <Route path="shop" element={<ProShop />} />
+              <Route path="chat" element={<ProChat />} />
+            </Route>
+            <Route
+              path="/demo/partner"
+              element={
+                <DemoAuthProvider personaKey="partner">
+                  <PartnerPortalLayout />
+                </DemoAuthProvider>
+              }
+            >
+              <Route index element={<PartnerDashboard />} />
+              <Route path="profile" element={<PartnerProfile />} />
+              <Route path="services" element={<PartnerServiceMenu />} />
+              <Route path="team" element={<PartnerTeamConsolidated />} />
+              <Route path="schedule" element={<PartnerScheduleConsolidated />} />
+              <Route path="campaigns" element={<PartnerCampaigns />} />
+              <Route path="conversions" element={<PartnerConversions />} />
+              <Route path="financials" element={<PartnerFinancialsConsolidated />} />
+              <Route path="support" element={<PartnerSupportConsolidated />} />
+            </Route>
+
+            {/* Local dev: admin without login (localhost / 127.0.0.1 only) */}
+            {import.meta.env.DEV && createAdminRoute(<DevLocalAdminShell />)}
 
             <Route path="/waitlist/model" element={
               <Authenticator loginMechanisms={['email']} signUpAttributes={['email', 'given_name', 'family_name']}>

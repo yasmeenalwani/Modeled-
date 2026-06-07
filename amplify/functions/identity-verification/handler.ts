@@ -133,16 +133,26 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 /**
  * Extract S3 key from URL (supports presigned URLs with query params)
  */
-function extractS3Key(url: string): string | null {
+function extractS3Key(urlOrKey: string): string | null {
   try {
-    let key: string | null = null;
-    if (url.includes('amazonaws.com')) {
-      const match = url.match(/amazonaws\.com\/(.+?)(?:\?|$)/);
-      key = match ? decodeURIComponent(match[1]) : null;
-    } else if (url.startsWith('/') || !url.includes('://')) {
-      key = url.startsWith('/') ? url.substring(1) : url;
+    const raw = (urlOrKey || '').trim();
+    if (!raw) return null;
+    if (!raw.includes('://')) {
+      return (raw.startsWith('/') ? raw.substring(1) : raw).split('?')[0];
     }
-    return key ? key.split('?')[0] : null; // Strip query params
+    const parsed = new URL(raw);
+    const pathname = decodeURIComponent(parsed.pathname.replace(/^\//, ''));
+    if (
+      pathname.startsWith('identity-verification/') ||
+      pathname.startsWith('public/identity-verification/')
+    ) {
+      return pathname.split('?')[0];
+    }
+    if (raw.includes('amazonaws.com')) {
+      const match = raw.match(/amazonaws\.com\/(.+?)(?:\?|$)/);
+      if (match) return decodeURIComponent(match[1]).split('?')[0];
+    }
+    return pathname.split('?')[0] || null;
   } catch (error) {
     console.error('Error extracting S3 key:', error);
     return null;

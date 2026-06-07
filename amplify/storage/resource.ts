@@ -133,6 +133,11 @@ export const storage = defineStorage({
       allow.groups(['Admin']).to(['read', 'write', 'delete']),
       allow.resource(identityVerificationFunction).to(['read']),
     ],
+    'public/identity-verification/*': [
+      allow.entity('identity').to(['read', 'write', 'delete']),
+      allow.groups(['Admin']).to(['read', 'write', 'delete']),
+      allow.resource(identityVerificationFunction).to(['read']),
+    ],
   }),
   
   // ============ S3 TRIGGERS ============

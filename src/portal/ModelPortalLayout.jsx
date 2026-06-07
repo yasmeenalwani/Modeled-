@@ -11,7 +11,9 @@ function useIsMobile() {
 }
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut } from 'aws-amplify/auth';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth } from '../hooks/usePortalAuth';
+import { usePortalBasePath } from '../hooks/usePortalBasePath';
+import { useDemoPortal } from '../context/DemoAuthContext';
 import { generateClient } from 'aws-amplify/data';
 import PortalNotifications from '../components/PortalNotifications';
 import NotificationBell from '../components/NotificationBell';
@@ -244,14 +246,14 @@ const styles = {
   },
 };
 
-// Navigation items - Core MVP focus (Dashboard, Education, Play, Shop hidden for later roadmap)
-const navItems = [
-  { path: '/model-portal/profile', icon: '', label: 'Model Card', end: true },
-  { path: '/model-portal/opportunities', icon: '', label: 'Matched' },
-  { path: '/model-portal/photos', icon: '', label: 'Looks' },
-  { path: '/model-portal/games', icon: '', label: 'Play' },
-  // Hidden for later: Dashboard, Education, Shop, Savings, Feedback, Calendar, Booked
-];
+function buildModelNavItems(base) {
+  return [
+    { path: `${base}/profile`, icon: '', label: 'Model Card', end: true },
+    { path: `${base}/opportunities`, icon: '', label: 'Matched' },
+    { path: `${base}/photos`, icon: '', label: 'Looks' },
+    { path: `${base}/games`, icon: '', label: 'Play' },
+  ];
+}
 
 // Mock current user
 const currentUser = {
@@ -269,7 +271,20 @@ const currentUser = {
 
 export default function ModelPortalLayout() {
   const navigate = useNavigate();
-  const { user } = useAuthenticator();
+  const { user, signOut: portalSignOut } = usePortalAuth();
+  const demo = useDemoPortal();
+  const basePath = usePortalBasePath('/model-portal');
+  const navItems = buildModelNavItems(basePath);
+  const displayUser = demo?.display
+    ? {
+        firstName: demo.display.firstName,
+        lastName: demo.display.lastName,
+        levelTier: demo.display.levelTier || 'Gold Model',
+        levelIcon: '',
+        xp: demo.display.xp ?? 2450,
+        xpToNext: demo.display.xpToNext ?? 3000,
+      }
+    : currentUser;
   const [showNotifications, setShowNotifications] = useState(false);
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -299,11 +314,15 @@ export default function ModelPortalLayout() {
   }, [user?.userId, user?.username, user?.userSub]);
 
   const handleSignOut = async () => {
+    if (demo) {
+      portalSignOut();
+      return;
+    }
     await signOut();
     navigate('/');
   };
 
-  const xpPct = Math.round((currentUser.xp / currentUser.xpToNext) * 100);
+  const xpPct = Math.round((displayUser.xp / displayUser.xpToNext) * 100);
 
   const sidebarStyle = isMobile
     ? {
@@ -324,7 +343,18 @@ export default function ModelPortalLayout() {
   return (
     <PortalStatusGate userType="model">
     <div style={styles.container}>
-      <InactivityLogout timeoutMinutes={30} redirectTo="/" />
+      {!demo && <InactivityLogout timeoutMinutes={30} redirectTo="/" />}
+      {demo && (
+        <div style={{
+          background: '#8B1E3F',
+          color: '#E8D5B5',
+          padding: '0.4rem 1rem',
+          fontSize: '0.8rem',
+          textAlign: 'center',
+        }}>
+          Demo mode — <a href="/demo" style={{ color: '#fff', marginLeft: '0.5rem' }}>All demos</a>
+        </div>
+      )}
 
       {/* Mobile top bar */}
       {isMobile && (
@@ -378,14 +408,14 @@ export default function ModelPortalLayout() {
         {/* User Profile */}
         <div style={styles.userSection}>
           <div style={styles.userAvatar}>
-            {currentUser.firstName.charAt(0)}
+            {displayUser.firstName.charAt(0)}
           </div>
           <div style={styles.userName}>
-            {currentUser.firstName} {currentUser.lastName}
+            {displayUser.firstName} {displayUser.lastName}
           </div>
           <div style={styles.userLevel}>
             <span style={styles.levelBadge}>
-              {currentUser.levelIcon} {currentUser.levelTier}
+              {displayUser.levelIcon} {displayUser.levelTier}
             </span>
           </div>
         </div>
@@ -394,7 +424,7 @@ export default function ModelPortalLayout() {
         <div style={styles.xpSection}>
           <div style={styles.xpHeader}>
             <span style={styles.xpLabel}>Level Progress</span>
-            <span style={styles.xpValue}>{currentUser.xp} / {currentUser.xpToNext} XP</span>
+            <span style={styles.xpValue}>{displayUser.xp} / {displayUser.xpToNext} XP</span>
           </div>
           <div style={styles.xpBar}>
             <div style={{ ...styles.xpFill, width: `${xpPct}%` }} />

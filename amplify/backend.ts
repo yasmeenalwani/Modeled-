@@ -71,6 +71,15 @@ notificationsLambda.grantInvoke(bookingRemindersLambda);
 (modelPaymentRemindersLambda as NodejsFunction).addEnvironment('NOTIFICATIONS_FUNCTION_NAME', notificationsLambda.functionName);
 notificationsLambda.grantInvoke(modelPaymentRemindersLambda);
 
+// ============ SES (transactional email) ============
+const sesSendPolicy = new PolicyStatement({
+  effect: Effect.ALLOW,
+  actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+  resources: ['*'],
+});
+notificationsLambda.addToRolePolicy(sesSendPolicy);
+backend.crmOutreachFunction.resources.lambda.addToRolePolicy(sesSendPolicy);
+
 // ============ Identity Verification REST API ============
 const apiStack = backend.createStack('IdentityVerificationApi');
 const identityVerificationLambda = backend.identityVerificationFunction.resources.lambda;
@@ -91,6 +100,21 @@ const verifyIdentityPath = identityVerificationApi.root.addResource('verify-iden
   defaultMethodOptions: { authorizationType: AuthorizationType.IAM },
 });
 verifyIdentityPath.addMethod('POST', lambdaIntegration);
+
+identityVerificationLambda.addToRolePolicy(
+  new PolicyStatement({
+    effect: Effect.ALLOW,
+    actions: ['rekognition:CompareFaces', 'rekognition:DetectText', 'rekognition:DetectFaces'],
+    resources: ['*'],
+  }),
+);
+
+const modeledStorageBucket = backend.storage.resources.bucket;
+modeledStorageBucket.grantRead(identityVerificationLambda);
+(identityVerificationLambda as NodejsFunction).addEnvironment(
+  'MODELEDSTORAGE_BUCKET_NAME',
+  modeledStorageBucket.bucketName,
+);
 
 const apiPolicy = new PolicyStatement({
   actions: ['execute-api:Invoke'],

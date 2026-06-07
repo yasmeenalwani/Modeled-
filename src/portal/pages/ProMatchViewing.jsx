@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/data';
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { usePortalAuth as useAuthenticator } from '../../hooks/usePortalAuth';
 import { useIsAdmin } from '../../components/ProtectedRoute';
 import { getMatchesForRequest, professionalDeclineMatch } from '../../utils/matchService';
 import { getRequestById } from '../../utils/requestService';
